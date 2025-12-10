@@ -13,6 +13,7 @@ import {
   type SensorSummary,
   type SensorPayload,
 } from "../api/sensors";
+import { fetchZones, type ZoneSummary } from "../api/zones";
 import { Card } from "../components/ui/Card";
 
 export function SensorsAdminPage() {
@@ -21,6 +22,11 @@ export function SensorsAdminPage() {
   const { data, isLoading, isError } = useQuery<SensorSummary[]>({
     queryKey: ["sensors"],
     queryFn: () => fetchSensors(),
+  });
+
+  const { data: zones } = useQuery<ZoneSummary[]>({
+    queryKey: ["zones", "for-sensors"],
+    queryFn: () => fetchZones(),
   });
 
   const [editingSensor, setEditingSensor] = useState<SensorSummary | null>(null);
@@ -111,15 +117,17 @@ export function SensorsAdminPage() {
     e.preventDefault();
     setErrorMsg(null);
 
+    if (!form.zone_id) {
+      setErrorMsg("La zone est obligatoire.");
+      return;
+    }
+
     const payload: SensorPayload = {
       name: form.name.trim(),
       type: form.type?.trim() || "",
       unit: form.unit?.trim() || "",
       hardware_id: form.hardware_id?.trim() || "",
-      zone_id:
-        form.zone_id === undefined || form.zone_id === null
-          ? undefined
-          : Number(form.zone_id),
+      zone_id: Number(form.zone_id),
       is_active: form.is_active ?? true,
     };
 
@@ -213,7 +221,8 @@ export function SensorsAdminPage() {
                         {s.unit || "—"}
                       </td>
                       <td className="py-2 pr-2 text-slate-600">
-                        {s.zone_id ?? "—"}
+                        {s.zone?.name ?? "—"}
+                        {s.parcel?.name ? ` · ${s.parcel.name}` : ""}
                       </td>
                       <td className="py-2 pr-2 text-slate-600">
                         {s.hardware_id || "—"}
@@ -311,11 +320,8 @@ export function SensorsAdminPage() {
             </div>
 
             <div>
-              <label className="block text-slate-600 mb-1">
-                ID zone (temporaire)
-              </label>
-              <input
-                type="number"
+              <label className="block text-slate-600 mb-1">Zone *</label>
+              <select
                 className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-slate-800 text-xs"
                 value={form.zone_id ?? ""}
                 onChange={(e) =>
@@ -327,7 +333,16 @@ export function SensorsAdminPage() {
                         : Number(e.target.value),
                   }))
                 }
-              />
+              >
+                <option value="">Sélectionner une zone</option>
+                {zones?.map((zone) => (
+                  <option key={zone.id} value={zone.id}>
+                    {zone.name}
+                    {zone.parcel?.name ? ` · ${zone.parcel.name}` : ""}
+                    {zone.farm?.name ? ` · ${zone.farm.name}` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

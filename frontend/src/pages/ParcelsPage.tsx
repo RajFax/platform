@@ -285,6 +285,7 @@ export function ParcelsPage() {
                   <tr className="border-b border-slate-200 bg-slate-50 text-slate-700">
                     <th className="text-left py-2 pr-2">Nom</th>
                     <th className="text-left py-2 pr-2">Exploitation</th>
+                    <th className="text-left py-2 pr-2">Bloc</th>
                     <th className="text-left py-2 pr-2">Surface (ha)</th>
                     <th className="text-left py-2 pr-2">Culture</th>
                     <th className="text-right py-2 pl-2">Actions</th>
@@ -311,6 +312,9 @@ export function ParcelsPage() {
                         >
                           Farm #{parcel.farm_id}
                         </Link>
+                      </td>
+                      <td className="py-2 pr-2 text-slate-700">
+                        {parcel.block?.name || "—"}
                       </td>
                       <td className="py-2 pr-2 text-slate-700">
                         {parcel.surface_ha ?? "—"}
@@ -392,7 +396,7 @@ export function ParcelsPage() {
                   <option value="">Sans bloc</option>
                   {availableBlocks.map((block) => (
                     <option key={block.id} value={block.id}>
-                      {block.name}
+                      {block.name} {block.type ? `(${block.type})` : ""}
                     </option>
                   ))}
                 </select>

@@ -77,6 +77,7 @@ class SensorController extends Controller
     public function update(Request $request, Sensor $sensor)
     {
         $data = $request->validate([
+            'zone_id' => ['sometimes', 'required', 'exists:zones,id'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'type' => ['sometimes', 'required', 'string', 'max:255'],
             'unit' => ['sometimes', 'required', 'string', 'max:32'],
@@ -85,7 +86,12 @@ class SensorController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
+        if (!array_key_exists('zone_id', $data)) {
+            $data['zone_id'] = $sensor->zone_id;
+        }
+
         $sensor->update($data);
+        $sensor->load('zone.parcel.farm');
 
         return response()->json($sensor);
     }

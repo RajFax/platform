@@ -1,5 +1,6 @@
 // src/api/farms.ts
 import { api } from "./client";
+import { type BlockType } from "./blocks";
 
 export interface FarmSummary {
   id: number;
@@ -15,6 +16,7 @@ export interface FarmBlockLight {
   id: number;
   farm_id: number;
   name: string;
+  type?: BlockType;
 }
 
 export interface FarmParcelLight {

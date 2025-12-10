@@ -170,7 +170,7 @@ export function FarmPage() {
                 <option value="">Sans bloc</option>
                 {farm.blocks?.map((block) => (
                   <option key={block.id} value={block.id}>
-                    {block.name}
+                    {block.name} {block.type ? `(${block.type})` : ""}
                   </option>
                 ))}
               </select>
@@ -294,7 +294,9 @@ function groupParcelsByBlock(parcels: ParcelForCard[]): GroupedParcels[] {
   const map = new Map<string, ParcelForCard[]>();
 
   parcels.forEach((p) => {
-    const blockName = p.block?.name ?? "Sans bloc";
+    const blockName = p.block
+      ? `${p.block.name}${p.block.type ? ` (${p.block.type})` : ""}`
+      : "Sans bloc";
     if (!map.has(blockName)) {
       map.set(blockName, []);
     }

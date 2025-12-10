@@ -83,9 +83,9 @@ class FarmController extends Controller
     {
         $farms = Farm::withCount(['parcels'])
             ->with(['parcels' => function ($q) {
-                $q->select('id', 'farm_id', 'name', 'culture_type', 'surface_ha');
+                $q->select('id', 'farm_id', 'name', 'culture_type', 'surface_ha', 'block_id');
             }, 'blocks' => function ($q) {
-                $q->select('id', 'farm_id', 'name');
+                $q->select('id', 'farm_id', 'name', 'type');
             }])
             ->orderBy('id')
             ->get();

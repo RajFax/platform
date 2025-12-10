@@ -13,6 +13,7 @@ class Block extends Model
     protected $fillable = [
         'farm_id',
         'name',
+        'type',
         'description',
     ];
 

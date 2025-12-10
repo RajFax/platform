@@ -104,6 +104,10 @@ class ZoneController extends Controller
             'fertilization_strategy_params' => ['sometimes', 'nullable', 'array'],
         ]);
 
+        if (!array_key_exists('parcel_id', $data)) {
+            $data['parcel_id'] = $zone->parcel_id;
+        }
+
         $zone->update($data);
         $zone->refresh()->load(['parcel.farm']);
 
