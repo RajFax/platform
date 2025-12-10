@@ -14,6 +14,7 @@ import {
   type ParcelCreatePayload,
   type ParcelUpdatePayload,
 } from "../api/parcels";
+import { fetchFarms, type FarmSummary } from "../api/farms";
 import { Card } from "../components/ui/Card";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
@@ -24,6 +25,11 @@ export function ParcelsPage() {
   const { data, isLoading, isError } = useQuery<ParcelSummary[]>({
     queryKey: ["parcels"],
     queryFn: () => fetchParcels(),
+  });
+
+  const { data: farms } = useQuery<FarmSummary[]>({
+    queryKey: ["farms"],
+    queryFn: fetchFarms,
   });
 
   const [editingParcel, setEditingParcel] = useState<ParcelSummary | null>(null);
@@ -40,6 +46,7 @@ export function ParcelsPage() {
     target_soil_moisture_max: string;
     target_temp_min: string;
     target_temp_max: string;
+    block_id: string;
   }>({
     farm_id: "",
     name: "",
@@ -51,7 +58,12 @@ export function ParcelsPage() {
     target_soil_moisture_max: "",
     target_temp_min: "",
     target_temp_max: "",
+    block_id: "",
   });
+
+  const selectedFarmId = Number(form.farm_id) || null;
+  const availableBlocks =
+    farms?.find((farm) => farm.id === selectedFarmId)?.blocks ?? [];
 
   const createMutation = useMutation({
     mutationFn: (payload: ParcelCreatePayload) => createParcel(payload),
@@ -102,6 +114,7 @@ export function ParcelsPage() {
       target_soil_moisture_max: "",
       target_temp_min: "",
       target_temp_max: "",
+      block_id: "",
     });
     setErrorMsg(null);
   }
@@ -122,6 +135,7 @@ export function ParcelsPage() {
       target_soil_moisture_max: "",
       target_temp_min: "",
       target_temp_max: "",
+      block_id: parcel.block_id != null ? String(parcel.block_id) : "",
     }));
   }
 
@@ -130,6 +144,8 @@ export function ParcelsPage() {
     setErrorMsg(null);
 
     const farmIdNum = Number(form.farm_id);
+    const blockIdNum =
+      form.block_id.trim() === "" ? null : Number(form.block_id.trim());
     const surfaceNum =
       form.surface_ha.trim() === "" ? undefined : Number(form.surface_ha);
 
@@ -144,6 +160,11 @@ export function ParcelsPage() {
       setErrorMsg(
         "L'exploitation (farm_id) est obligatoire et doit être un nombre."
       );
+      return;
+    }
+
+    if (form.block_id.trim() !== "" && (blockIdNum === null || isNaN(blockIdNum))) {
+      setErrorMsg("Le bloc doit être un identifiant valide ou vide.");
       return;
     }
 
@@ -184,6 +205,7 @@ export function ParcelsPage() {
         ) ?? null,
         target_temp_min: parseNumOr(form.target_temp_min) ?? null,
         target_temp_max: parseNumOr(form.target_temp_max) ?? null,
+        block_id: blockIdNum,
       };
 
       updateMutation.mutate({
@@ -198,6 +220,7 @@ export function ParcelsPage() {
         culture_type: form.culture_type.trim(),
         crop_stage: form.crop_stage.trim(),
         surface_ha: surfaceNum ?? undefined,
+        block_id: blockIdNum,
         planting_date: form.planting_date || undefined,
         target_soil_moisture_min: parseNumOr(
           form.target_soil_moisture_min
@@ -337,18 +360,43 @@ export function ParcelsPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-3 text-xs">
-            <div>
-              <label className="block text-slate-600 mb-1">
-                ID exploitation (farm_id) *
-              </label>
-              <input
-                type="number"
-                className="w-full"
-                value={form.farm_id}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, farm_id: e.target.value }))
-                }
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-600 mb-1">Exploitation *</label>
+                <select
+                  className="w-full"
+                  value={form.farm_id}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, farm_id: e.target.value, block_id: "" }))
+                  }
+                >
+                  <option value="">Sélectionner une exploitation</option>
+                  {farms?.map((farm) => (
+                    <option key={farm.id} value={farm.id}>
+                      {farm.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-600 mb-1">Bloc (optionnel)</label>
+                <select
+                  className="w-full"
+                  value={form.block_id}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, block_id: e.target.value }))
+                  }
+                  disabled={!selectedFarmId || availableBlocks.length === 0}
+                >
+                  <option value="">Sans bloc</option>
+                  {availableBlocks.map((block) => (
+                    <option key={block.id} value={block.id}>
+                      {block.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>

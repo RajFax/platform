@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Block;
 use App\Models\Parcel;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ParcelController extends Controller
 {
@@ -35,7 +37,12 @@ class ParcelController extends Controller
     {
         $data = $request->validate([
             'farm_id'       => ['required', 'exists:farms,id'],
-            'block_id'      => ['nullable', 'exists:blocks,id'],
+            'block_id'      => [
+                'nullable',
+                Rule::exists('blocks', 'id')->where(
+                    fn ($query) => $query->where('farm_id', $request->integer('farm_id'))
+                ),
+            ],
             'name'          => ['required', 'string', 'max:255'],
             'surface_ha'    => ['nullable', 'numeric', 'min:0'],
             'description'   => ['nullable', 'string'],
@@ -50,6 +57,8 @@ class ParcelController extends Controller
             'target_temp_max' => ['nullable', 'numeric'],
         ]);
 
+        $this->assertBlockMatchesFarm($data['block_id'] ?? null, $data['farm_id']);
+
         $parcel = Parcel::create($data);
 
         return response()->json($parcel, 201);
@@ -58,9 +67,17 @@ class ParcelController extends Controller
     // PUT /api/parcels/{id}
     public function update(Request $request, Parcel $parcel)
     {
+        $farmIdForBlock = $request->input('farm_id', $parcel->farm_id);
+
         $data = $request->validate([
             'farm_id'       => ['sometimes', 'required', 'exists:farms,id'],
-            'block_id'      => ['sometimes', 'nullable', 'exists:blocks,id'],
+            'block_id'      => [
+                'sometimes',
+                'nullable',
+                Rule::exists('blocks', 'id')->where(
+                    fn ($query) => $query->where('farm_id', $farmIdForBlock)
+                ),
+            ],
             'name'          => ['sometimes', 'required', 'string', 'max:255'],
             'surface_ha'    => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'description'   => ['sometimes', 'nullable', 'string'],
@@ -75,6 +92,11 @@ class ParcelController extends Controller
             'target_temp_max' => ['sometimes', 'nullable', 'numeric'],
         ]);
 
+        $newFarmId = $data['farm_id'] ?? $parcel->farm_id;
+        $newBlockId = $data['block_id'] ?? $parcel->block_id;
+
+        $this->assertBlockMatchesFarm($newBlockId, $newFarmId);
+
         $parcel->update($data);
 
         return response()->json($parcel);
@@ -86,5 +108,19 @@ class ParcelController extends Controller
         $parcel->delete();
 
         return response()->json(['message' => 'Parcel deleted'], 204);
+    }
+
+    protected function assertBlockMatchesFarm(?int $blockId, int $farmId): void
+    {
+        if (!$blockId) {
+            return;
+        }
+
+        $blockFarmId = (int) Block::where('id', $blockId)->value('farm_id');
+        $farmId = (int) $farmId;
+
+        if ($blockFarmId !== $farmId) {
+            abort(422, 'The selected block does not belong to the given farm.');
+        }
     }
 }
