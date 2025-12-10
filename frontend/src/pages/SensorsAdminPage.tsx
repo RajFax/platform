@@ -16,6 +16,25 @@ import {
 import { fetchZones, type ZoneSummary } from "../api/zones";
 import { Card } from "../components/ui/Card";
 
+const SENSOR_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "soil_moisture", label: "Humidité sol" },
+  { value: "temperature_air", label: "Température air" },
+  { value: "humidity_air", label: "Humidité air" },
+  { value: "ec_soil", label: "EC sol" },
+  { value: "ph_soil", label: "pH sol" },
+  { value: "co2", label: "CO₂" },
+  { value: "light", label: "Luminosité" },
+  { value: "pressure", label: "Pression" },
+  { value: "rainfall", label: "Pluviométrie" },
+];
+
+function formatSensorType(type?: string | null) {
+  if (!type) return "—";
+
+  const match = SENSOR_TYPE_OPTIONS.find((option) => option.value === type);
+  return match?.label ?? type;
+}
+
 export function SensorsAdminPage() {
   const queryClient = useQueryClient();
 
@@ -124,7 +143,7 @@ export function SensorsAdminPage() {
 
     const payload: SensorPayload = {
       name: form.name.trim(),
-      type: form.type?.trim() || "",
+      type: form.type?.trim() || null,
       unit: form.unit?.trim() || "",
       hardware_id: form.hardware_id?.trim() || "",
       zone_id: Number(form.zone_id),
@@ -215,7 +234,7 @@ export function SensorsAdminPage() {
                         {s.name}
                       </td>
                       <td className="py-2 pr-2 text-slate-700">
-                        {s.type || "—"}
+                        {formatSensorType(s.type)}
                       </td>
                       <td className="py-2 pr-2 text-slate-700">
                         {s.unit || "—"}
@@ -295,15 +314,20 @@ export function SensorsAdminPage() {
 
             <div>
               <label className="block text-slate-600 mb-1">Type</label>
-              <input
-                type="text"
-                placeholder="SOIL_MOISTURE, TEMP_AIR..."
+              <select
                 className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-slate-800 text-xs"
                 value={form.type ?? ""}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, type: e.target.value }))
+                  setForm((f) => ({ ...f, type: e.target.value || "" }))
                 }
-              />
+              >
+                <option value="">Sélectionner un type</option>
+                {SENSOR_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
