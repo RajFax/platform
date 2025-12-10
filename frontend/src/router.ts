@@ -7,6 +7,7 @@ import { AppLayout } from "./layout/AppLayout";
 import { DashboardPage } from "./pages/DashboardPage";
 import { FarmsPage } from "./pages/FarmsPage";
 import { FarmPage } from "./pages/FarmPage";
+import { BlocksPage } from "./pages/BlocksPage";
 
 import { ParcelsPage } from "./pages/ParcelsPage";
 import { ParcelPage } from "./pages/ParcelPage";
@@ -35,6 +36,9 @@ export const router = createBrowserRouter([
       // Farms
       { path: "farms", element: React.createElement(FarmsPage) },
       { path: "farms/:farmId", element: React.createElement(FarmPage) },
+
+      // Blocks
+      { path: "blocks", element: React.createElement(BlocksPage) },
 
       // Parcels (NOUVEAU CRUD)
       { path: "parcels", element: React.createElement(ParcelsPage) },
