@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 const navItems = [
   { to: "/", label: "Dashboard" },
   { to: "/farms", label: "Exploitations" },
+  { to: "/blocks", label: "Blocs" },
   { to: "/parcels", label: "Parcelles" },
   { to: "/zones-admin", label: "Zones" },
   { to: "/sensors-admin", label: "Capteurs" },

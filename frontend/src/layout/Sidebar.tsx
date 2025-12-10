@@ -25,6 +25,15 @@ export function Sidebar() {
         </NavLink>
 
         <NavLink
+          to="/blocks"
+          className={({ isActive }) =>
+            `sidebar-link ${isActive ? "sidebar-link-active" : ""}`
+          }
+        >
+          Blocs
+        </NavLink>
+
+        <NavLink
           to="/zones-admin"
           className={({ isActive }) =>
             `sidebar-link ${isActive ? "sidebar-link-active" : ""}`
