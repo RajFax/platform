@@ -1,46 +1,71 @@
+import React from "react";
 import { createBrowserRouter } from "react-router-dom";
+
+import { AppLayout } from "./layout/AppLayout";
 
 import { DashboardPage } from "./pages/DashboardPage";
 import { FarmsPage } from "./pages/FarmsPage";
 import { FarmPage } from "./pages/FarmPage";
 import { BlocksPage } from "./pages/BlocksPage";
-import { ZonePage } from "./pages/ZonePage";
+
+import { ParcelsPage } from "./pages/ParcelsPage";
+import { ParcelPage } from "./pages/ParcelPage";
+
 import { ZonesAdminPage } from "./pages/ZonesAdminPage";
+import { ZonePage } from "./pages/ZonePage";
+import { ZoneEditPage } from "./pages/ZoneEditPage";
+
 import { SensorsAdminPage } from "./pages/SensorsAdminPage";
 
 import { ControllersPage } from "./pages/ControllersPage";
 import { AlertsPage } from "./pages/AlertsPage";
 import { StrategiesPage } from "./pages/StrategiesPage";
+
 import { WeatherStationsPage } from "./pages/WeatherStationsPage";
 import { WeatherStationPage } from "./pages/WeatherStationPage";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <DashboardPage /> },
+  {
+    path: "/",
+    element: React.createElement(AppLayout),
+    children: [
+      // Dashboard
+      { index: true, element: React.createElement(DashboardPage) },
 
-  // Farms
-  { path: "/farms", element: <FarmsPage /> },
-  { path: "/farms/:farmId", element: <FarmPage /> },
+      // Farms
+      { path: "farms", element: React.createElement(FarmsPage) },
+      { path: "farms/:farmId", element: React.createElement(FarmPage) },
 
-  // Blocks
-  { path: "/blocks", element: <BlocksPage /> },
+      // Blocks
+      { path: "blocks", element: React.createElement(BlocksPage) },
 
-  // Zones
-  { path: "/zones/:zoneId", element: <ZonePage /> },
-  { path: "/zones-admin", element: <ZonesAdminPage /> },
+      // Parcels (NOUVEAU CRUD)
+      { path: "parcels", element: React.createElement(ParcelsPage) },
+      { path: "parcels/:parcelId", element: React.createElement(ParcelPage) },
 
-  // Sensors
-  { path: "/sensors-admin", element: <SensorsAdminPage /> },
+      // Zones
+      { path: "zones/:zoneId", element: React.createElement(ZonePage) },
+      { path: "zones/:zoneId/edit", element: React.createElement(ZoneEditPage) },
+      { path: "zones-admin", element: React.createElement(ZonesAdminPage) },
 
-  // Controllers
-  { path: "/controllers", element: <ControllersPage /> },
+      // Sensors
+      { path: "sensors-admin", element: React.createElement(SensorsAdminPage) },
 
-  // Alerts
-  { path: "/alerts", element: <AlertsPage /> },
+      // Controllers
+      { path: "controllers", element: React.createElement(ControllersPage) },
 
-  // Strategies overview
-  { path: "/strategies", element: <StrategiesPage /> },
+      // Alerts
+      { path: "alerts", element: React.createElement(AlertsPage) },
 
-  // Weather
-  { path: "/weather-stations", element: <WeatherStationsPage /> },
-  { path: "/weather-stations/:stationId", element: <WeatherStationPage /> },
+      // Strategies
+      { path: "strategies", element: React.createElement(StrategiesPage) },
+
+      // Weather Stations
+      { path: "weather-stations", element: React.createElement(WeatherStationsPage) },
+      {
+        path: "weather-stations/:stationId",
+        element: React.createElement(WeatherStationPage),
+      },
+    ],
+  },
 ]);
