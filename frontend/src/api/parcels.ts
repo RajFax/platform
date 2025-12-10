@@ -1,11 +1,12 @@
 // src/api/parcels.ts
 import { api } from "./client";
+import { type BlockType } from "./blocks";
 
 export interface ParcelDTO {
   id: number;
   farm_id: number;
   block_id: number | null;
-  block?: { id: number; name: string; farm_id: number } | null;
+  block?: { id: number; name: string; farm_id: number; type?: BlockType } | null;
   name: string;
   surface_ha: number | null;
   description: string | null;

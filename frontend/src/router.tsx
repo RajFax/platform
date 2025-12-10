@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { DashboardPage } from "./pages/DashboardPage";
 import { FarmsPage } from "./pages/FarmsPage";
 import { FarmPage } from "./pages/FarmPage";
+import { BlocksPage } from "./pages/BlocksPage";
 import { ZonePage } from "./pages/ZonePage";
 import { ZonesAdminPage } from "./pages/ZonesAdminPage";
 import { SensorsAdminPage } from "./pages/SensorsAdminPage";
@@ -19,6 +20,9 @@ export const router = createBrowserRouter([
   // Farms
   { path: "/farms", element: <FarmsPage /> },
   { path: "/farms/:farmId", element: <FarmPage /> },
+
+  // Blocks
+  { path: "/blocks", element: <BlocksPage /> },
 
   // Zones
   { path: "/zones/:zoneId", element: <ZonePage /> },

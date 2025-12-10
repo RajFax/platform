@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Api\FarmController;
+use App\Http\Controllers\Api\BlockController;
 use App\Http\Controllers\Api\ParcelController;
 use App\Http\Controllers\Api\ZoneController;
 use App\Http\Controllers\Api\SensorController;
@@ -31,6 +32,15 @@ Route::get('/farms/{farm}', [FarmController::class, 'show']);
 Route::post('/farms', [FarmController::class, 'store']);
 Route::put('/farms/{farm}', [FarmController::class, 'update']);
 Route::delete('/farms/{farm}', [FarmController::class, 'destroy']);
+
+// -------------------------------
+// BLOCKS
+// -------------------------------
+Route::get('/blocks', [BlockController::class, 'index']);
+Route::get('/blocks/{block}', [BlockController::class, 'show']);
+Route::post('/blocks', [BlockController::class, 'store']);
+Route::put('/blocks/{block}', [BlockController::class, 'update']);
+Route::delete('/blocks/{block}', [BlockController::class, 'destroy']);
 
 // -------------------------------
 // PARCELS

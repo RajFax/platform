@@ -13,6 +13,7 @@ import {
   type ZoneSummary,
   type ZonePayload,
 } from "../api/zones";
+import { fetchParcels, type ParcelSummary } from "../api/parcels";
 import { Card } from "../components/ui/Card";
 
 export function ZonesAdminPage() {
@@ -21,6 +22,11 @@ export function ZonesAdminPage() {
   const { data, isLoading, isError } = useQuery<ZoneSummary[]>({
     queryKey: ["zones"],
     queryFn: () => fetchZones(),
+  });
+
+  const { data: parcels } = useQuery<ParcelSummary[]>({
+    queryKey: ["parcels", "for-zones"],
+    queryFn: () => fetchParcels(),
   });
 
   const [editingZone, setEditingZone] = useState<ZoneSummary | null>(null);
@@ -113,13 +119,15 @@ export function ZonesAdminPage() {
     e.preventDefault();
     setErrorMsg(null);
 
+    if (!form.parcel_id) {
+      setErrorMsg("La parcelle est obligatoire.");
+      return;
+    }
+
     const payload: ZonePayload = {
       name: form.name.trim(),
       description: form.description ?? "",
-      parcel_id:
-        form.parcel_id === undefined || form.parcel_id === null
-          ? undefined
-          : Number(form.parcel_id),
+      parcel_id: Number(form.parcel_id),
       surface_ha:
         form.surface_ha === undefined || form.surface_ha === null
           ? undefined
@@ -209,7 +217,7 @@ export function ZonesAdminPage() {
                         {z.name}
                       </td>
                       <td className="py-2 pr-2 text-slate-600">
-                        {z.parcel_id ?? "—"}
+                        {z.parcel?.name ?? "—"}
                       </td>
                       <td className="py-2 pr-2 text-slate-700">
                         {z.surface_ha ?? "—"}
@@ -278,11 +286,8 @@ export function ZonesAdminPage() {
             </div>
 
             <div>
-              <label className="block text-slate-600 mb-1">
-                ID parcelle (temporaire)
-              </label>
-              <input
-                type="number"
+              <label className="block text-slate-600 mb-1">Parcelle *</label>
+              <select
                 className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-slate-800 text-xs"
                 value={form.parcel_id ?? ""}
                 onChange={(e) =>
@@ -294,7 +299,16 @@ export function ZonesAdminPage() {
                         : Number(e.target.value),
                   }))
                 }
-              />
+              >
+                <option value="">Sélectionner une parcelle</option>
+                {parcels?.map((parcel) => (
+                  <option key={parcel.id} value={parcel.id}>
+                    {parcel.name}
+                    {parcel.block?.name ? ` · Bloc ${parcel.block.name}` : ""}
+                    {` (Farm #${parcel.farm_id})`}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

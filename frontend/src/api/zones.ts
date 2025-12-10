@@ -6,6 +6,8 @@ export interface ZoneSummary {
   name: string;
   description?: string | null;
   parcel_id?: number | null;
+  parcel?: { id: number; name: string } | null;
+  farm?: { id: number; name: string } | null;
   surface_ha?: number | null;
   is_active?: boolean;
 }
@@ -25,6 +27,7 @@ export interface ZonePayload {
 // LISTE des zones (avec filtres éventuels)
 export async function fetchZones(params?: {
   parcel_id?: number;
+  farm_id?: number;
   is_active?: boolean;
 }): Promise<ZoneSummary[]> {
   const { data } = await api.get<ZoneSummary[]>("/zones", {

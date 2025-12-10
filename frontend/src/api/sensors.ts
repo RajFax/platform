@@ -8,6 +8,9 @@ export interface SensorSummary {
   unit?: string | null;
   hardware_id?: string | null;
   zone_id?: number | null;
+  zone?: { id: number; name: string } | null;
+  parcel?: { id: number; name: string } | null;
+  farm?: { id: number; name: string } | null;
   is_active?: boolean;
 }
 

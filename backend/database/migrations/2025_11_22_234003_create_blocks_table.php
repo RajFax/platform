@@ -15,6 +15,7 @@ public function up(): void
         $table->id();
         $table->foreignId('farm_id')->constrained()->cascadeOnDelete();
         $table->string('name');
+        $table->string('type')->default('openfield');
         $table->string('description')->nullable();
         $table->timestamps();
     });
