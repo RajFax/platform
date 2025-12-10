@@ -8,6 +8,13 @@ export interface FarmSummary {
   surface_ha: number | null;
   description: string | null;
   parcels_count?: number;
+  blocks?: FarmBlockLight[];
+}
+
+export interface FarmBlockLight {
+  id: number;
+  farm_id: number;
+  name: string;
 }
 
 export interface FarmParcelLight {
@@ -17,6 +24,8 @@ export interface FarmParcelLight {
   culture_type: string;
   variety: string | null;
   crop_stage: string;
+  block_id: number | null;
+  block?: FarmBlockLight | null;
   zones?: { id: number; name: string; is_active: boolean }[];
 }
 

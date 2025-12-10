@@ -5,6 +5,7 @@ export interface ParcelDTO {
   id: number;
   farm_id: number;
   block_id: number | null;
+  block?: { id: number; name: string; farm_id: number } | null;
   name: string;
   surface_ha: number | null;
   description: string | null;
@@ -75,6 +76,8 @@ export async function deleteParcel(id: number): Promise<void> {
 export interface ParcelSummary {
   id: number;
   farm_id: number;
+  block_id: number | null;
+  block?: { id: number; name: string; farm_id: number } | null;
   name: string;
   surface_ha: number | null;
   culture_type: string;

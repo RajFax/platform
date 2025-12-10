@@ -28,6 +28,7 @@ export function FarmPage() {
     culture_type: "",
     variety: "",
     crop_stage: "",
+    block_id: "",
   });
 
   const createParcelMutation = useMutation({
@@ -43,6 +44,7 @@ export function FarmPage() {
           culture_type: "",
           variety: "",
           crop_stage: "",
+          block_id: null,
         }
       );
     },
@@ -85,6 +87,7 @@ export function FarmPage() {
       culture_type: "",
       variety: "",
       crop_stage: "",
+      block_id: null,
     });
   }
 
@@ -148,6 +151,29 @@ export function FarmPage() {
                 }
                 placeholder="1.2"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-600">Bloc</label>
+              <select
+                className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                value={newParcel.block_id ?? ""}
+                onChange={(e) =>
+                  setNewParcel({
+                    ...newParcel,
+                    block_id: e.target.value ? Number(e.target.value) : null,
+                  })
+                }
+              >
+                <option value="">Sans bloc</option>
+                {farm.blocks?.map((block) => (
+                  <option key={block.id} value={block.id}>
+                    {block.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -231,6 +257,7 @@ export function FarmPage() {
                     <EditableParcelCard
                       key={parcel.id}
                       parcel={parcel}
+                      blocks={farm.blocks}
                       editParcelForm={editParcelForm}
                       setEditParcelForm={setEditParcelForm}
                       setEditingParcelId={setEditingParcelId}
@@ -240,6 +267,7 @@ export function FarmPage() {
                     <ParcelCard
                       key={parcel.id}
                       parcel={parcel}
+                      blocks={farm.blocks}
                       setEditingParcelId={setEditingParcelId}
                       setEditParcelForm={setEditParcelForm}
                       deleteParcelMutation={deleteParcelMutation}
@@ -288,17 +316,22 @@ type ParcelCardProps = {
     culture_type: string;
     variety: string;
     crop_stage: string;
+    block_id: string;
   }) => void;
+  blocks: FarmDetail["blocks"];
   deleteParcelMutation: any;
 };
 
 function ParcelCard({
   parcel,
+  blocks,
   setEditingParcelId,
   setEditParcelForm,
   deleteParcelMutation,
 }: ParcelCardProps) {
   const zones = parcel.zones ?? [];
+  const blockName =
+    parcel.block?.name ?? blocks?.find((b) => b.id === parcel.block_id)?.name;
 
   return (
     <div className="border border-slate-200 rounded-lg p-3 bg-white shadow-sm flex flex-col gap-2">
@@ -309,6 +342,9 @@ function ParcelCard({
             {parcel.culture_type}
             {parcel.variety ? ` · ${parcel.variety}` : ""}
           </div>
+          {blockName && (
+            <div className="text-xs text-slate-500 mt-1">Bloc : {blockName}</div>
+          )}
           <div className="text-xs text-slate-500 mt-1">
             Stade : {parcel.crop_stage}
           </div>
@@ -355,6 +391,7 @@ function ParcelCard({
               culture_type: parcel.culture_type,
               variety: parcel.variety ?? "",
               crop_stage: parcel.crop_stage,
+              block_id: parcel.block_id?.toString() ?? "",
             });
           }}
         >
@@ -382,6 +419,7 @@ function EditableParcelCard({
   setEditParcelForm,
   setEditingParcelId,
   updateParcelMutation,
+  blocks,
 }: {
   parcel: ParcelForCard;
   editParcelForm: {
@@ -390,6 +428,7 @@ function EditableParcelCard({
     culture_type: string;
     variety: string;
     crop_stage: string;
+    block_id: string;
   };
   setEditParcelForm: (f: {
     name: string;
@@ -397,9 +436,11 @@ function EditableParcelCard({
     culture_type: string;
     variety: string;
     crop_stage: string;
+    block_id: string;
   }) => void;
   setEditingParcelId: (id: number | null) => void;
   updateParcelMutation: any;
+  blocks: FarmDetail["blocks"];
 }) {
   return (
     <div className="border border-slate-200 rounded-lg p-3 bg-white shadow-sm flex flex-col gap-2 text-xs">
@@ -465,6 +506,26 @@ function EditableParcelCard({
             }
           />
         </div>
+        <div className="space-y-1">
+          <label className="text-slate-600">Bloc</label>
+          <select
+            className="w-full rounded border border-slate-200 bg-white px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+            value={editParcelForm.block_id}
+            onChange={(e) =>
+              setEditParcelForm({
+                ...editParcelForm,
+                block_id: e.target.value,
+              })
+            }
+          >
+            <option value="">Sans bloc</option>
+            {blocks?.map((block) => (
+              <option key={block.id} value={block.id}>
+                {block.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex justify-end gap-2 mt-2">
@@ -484,6 +545,9 @@ function EditableParcelCard({
                 crop_stage: editParcelForm.crop_stage,
                 surface_ha: editParcelForm.surface_ha
                   ? Number(editParcelForm.surface_ha)
+                  : null,
+                block_id: editParcelForm.block_id
+                  ? Number(editParcelForm.block_id)
                   : null,
               },
             })
