@@ -248,6 +248,7 @@ export function BlocksPage() {
               <input
                 className="w-full rounded border border-slate-200 px-2 py-1"
                 value={form.name}
+                maxLength={255}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
@@ -275,6 +276,7 @@ export function BlocksPage() {
                 rows={3}
                 className="w-full rounded border border-slate-200 px-2 py-1"
                 value={form.description ?? ""}
+                maxLength={255}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, description: e.target.value }))
                 }
