@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class BlockController extends Controller
 {
@@ -54,7 +55,14 @@ class BlockController extends Controller
         try {
             $block = Block::create($data);
         } catch (QueryException $e) {
-            if ($e->getCode() === '22001') {
+            $sqlState = $e->getCode();
+            Log::error('Failed to create block', [
+                'sql_state' => $sqlState,
+                'farm_id' => $data['farm_id'] ?? null,
+                'message' => $e->getMessage(),
+            ]);
+
+            if ($sqlState === '22001') {
                 return response()->json([
                     'message' => 'Description trop longue (255 caractères maximum).',
                 ], 422);
