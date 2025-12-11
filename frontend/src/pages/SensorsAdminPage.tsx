@@ -28,6 +28,29 @@ const SENSOR_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "rainfall", label: "Pluviométrie" },
 ];
 
+const SENSOR_UNIT_OPTIONS = ["%", "°C", "dS/m", "pH", "ppm", "lux", "hPa", "mm"];
+
+const SENSOR_DEFAULT_UNIT: Record<string, string> = {
+  soil_moisture: "%",
+  temperature_air: "°C",
+  humidity_air: "%",
+  ec_soil: "dS/m",
+  ph_soil: "pH",
+  co2: "ppm",
+  light: "lux",
+  pressure: "hPa",
+  rainfall: "mm",
+};
+
+type SensorFormState = {
+  name: string;
+  type: string;
+  unit: string;
+  hardware_id: string;
+  zone_id?: number;
+  is_active: boolean;
+};
+
 function formatSensorType(type?: string | null) {
   if (!type) return "—";
 
@@ -49,7 +72,7 @@ export function SensorsAdminPage() {
   });
 
   const [editingSensor, setEditingSensor] = useState<SensorSummary | null>(null);
-  const [form, setForm] = useState<SensorPayload>({
+  const [form, setForm] = useState<SensorFormState>({
     name: "",
     type: "",
     unit: "",
@@ -116,7 +139,7 @@ export function SensorsAdminPage() {
     setForm({
       name: sensor.name,
       type: sensor.type ?? "",
-      unit: sensor.unit ?? "",
+      unit: sensor.unit ?? SENSOR_DEFAULT_UNIT[sensor.type ?? ""] ?? "",
       hardware_id: sensor.hardware_id ?? "",
       zone_id:
         sensor.zone_id === undefined || sensor.zone_id === null
@@ -136,24 +159,36 @@ export function SensorsAdminPage() {
     e.preventDefault();
     setErrorMsg(null);
 
+    const trimmedName = form.name.trim();
+
+    if (!trimmedName) {
+      setErrorMsg("Le nom du capteur est obligatoire.");
+      return;
+    }
+
+    if (!form.type || !SENSOR_TYPE_OPTIONS.some((o) => o.value === form.type)) {
+      setErrorMsg("Le type de capteur est obligatoire.");
+      return;
+    }
+
+    if (!form.unit || !SENSOR_UNIT_OPTIONS.includes(form.unit)) {
+      setErrorMsg("Merci de sélectionner une unité valide.");
+      return;
+    }
+
     if (!form.zone_id) {
       setErrorMsg("La zone est obligatoire.");
       return;
     }
 
     const payload: SensorPayload = {
-      name: form.name.trim(),
-      type: form.type?.trim() || null,
-      unit: form.unit?.trim() || "",
-      hardware_id: form.hardware_id?.trim() || "",
+      name: trimmedName,
+      type: form.type,
+      unit: form.unit,
+      hardware_id: form.hardware_id?.trim() || null,
       zone_id: Number(form.zone_id),
       is_active: form.is_active ?? true,
     };
-
-    if (!payload.name) {
-      setErrorMsg("Le nom du capteur est obligatoire.");
-      return;
-    }
 
     if (editingSensor) {
       updateMutation.mutate({ id: editingSensor.id, payload });
@@ -306,6 +341,7 @@ export function SensorsAdminPage() {
                 type="text"
                 className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-slate-800 text-xs"
                 value={form.name}
+                required
                 onChange={(e) =>
                   setForm((f) => ({ ...f, name: e.target.value }))
                 }
@@ -313,13 +349,24 @@ export function SensorsAdminPage() {
             </div>
 
             <div>
-              <label className="block text-slate-600 mb-1">Type</label>
+              <label className="block text-slate-600 mb-1">
+                Type de capteur *
+              </label>
               <select
                 className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-slate-800 text-xs"
                 value={form.type ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, type: e.target.value || "" }))
-                }
+                required
+                onChange={(e) => {
+                  const selectedType = e.target.value;
+                  setForm((f) => ({
+                    ...f,
+                    type: selectedType,
+                    unit:
+                      selectedType && SENSOR_DEFAULT_UNIT[selectedType]
+                        ? SENSOR_DEFAULT_UNIT[selectedType]
+                        : "",
+                  }));
+                }}
               >
                 <option value="">Sélectionner un type</option>
                 {SENSOR_TYPE_OPTIONS.map((option) => (
@@ -331,16 +378,22 @@ export function SensorsAdminPage() {
             </div>
 
             <div>
-              <label className="block text-slate-600 mb-1">Unité</label>
-              <input
-                type="text"
-                placeholder="% , °C, kPa..."
+              <label className="block text-slate-600 mb-1">Unité *</label>
+              <select
                 className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-slate-800 text-xs"
                 value={form.unit ?? ""}
+                required
                 onChange={(e) =>
                   setForm((f) => ({ ...f, unit: e.target.value }))
                 }
-              />
+              >
+                <option value="">Sélectionner une unité</option>
+                {SENSOR_UNIT_OPTIONS.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -348,6 +401,7 @@ export function SensorsAdminPage() {
               <select
                 className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-slate-800 text-xs"
                 value={form.zone_id ?? ""}
+                required
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,

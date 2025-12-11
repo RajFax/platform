@@ -5,9 +5,33 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Sensor;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SensorController extends Controller
 {
+    private const SENSOR_TYPES = [
+        'soil_moisture',
+        'temperature_air',
+        'humidity_air',
+        'ec_soil',
+        'ph_soil',
+        'co2',
+        'light',
+        'pressure',
+        'rainfall',
+    ];
+
+    private const SENSOR_UNITS = [
+        '%',
+        '°C',
+        'dS/m',
+        'pH',
+        'ppm',
+        'lux',
+        'hPa',
+        'mm',
+    ];
+
     // GET /api/sensors?zone_id=...
     public function index(Request $request)
     {
@@ -57,8 +81,8 @@ class SensorController extends Controller
         $data = $request->validate([
             'zone_id' => ['required', 'exists:zones,id'],
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', 'max:255'],
-            'unit' => ['required', 'string', 'max:32'],
+            'type' => ['required', 'string', 'max:255', Rule::in(self::SENSOR_TYPES)],
+            'unit' => ['required', 'string', 'max:32', Rule::in(self::SENSOR_UNITS)],
             'hardware_id' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'array'],
             'is_active' => ['nullable', 'boolean'],
@@ -79,8 +103,8 @@ class SensorController extends Controller
         $data = $request->validate([
             'zone_id' => ['sometimes', 'required', 'exists:zones,id'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'type' => ['sometimes', 'required', 'string', 'max:255'],
-            'unit' => ['sometimes', 'required', 'string', 'max:32'],
+            'type' => ['sometimes', 'required', 'string', 'max:255', Rule::in(self::SENSOR_TYPES)],
+            'unit' => ['sometimes', 'required', 'string', 'max:32', Rule::in(self::SENSOR_UNITS)],
             'hardware_id' => ['sometimes', 'nullable', 'string', 'max:255'],
             'position' => ['sometimes', 'nullable', 'array'],
             'is_active' => ['sometimes', 'boolean'],

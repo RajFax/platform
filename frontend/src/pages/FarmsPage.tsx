@@ -113,6 +113,11 @@ export function FarmsPage() {
       return;
     }
 
+    if (payload.surface_ha !== undefined && payload.surface_ha < 0) {
+      setErrorMsg("La surface doit être positive ou nulle.");
+      return;
+    }
+
     if (editingFarm) {
       updateMutation.mutate({ id: editingFarm.id, payload });
     } else {
@@ -234,6 +239,7 @@ export function FarmsPage() {
               <input
                 type="text"
                 className="w-full"
+                required
                 value={form.name}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, name: e.target.value }))
@@ -260,6 +266,8 @@ export function FarmsPage() {
               <input
                 type="number"
                 className="w-full"
+                min="0"
+                step="0.01"
                 value={form.surface_ha ?? ""}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, surface_ha: Number(e.target.value) }))
