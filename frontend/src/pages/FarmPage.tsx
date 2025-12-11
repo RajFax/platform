@@ -44,7 +44,7 @@ export function FarmPage() {
           culture_type: "",
           variety: "",
           crop_stage: "",
-          block_id: null,
+          block_id: farm.blocks?.[0]?.id ?? 0,
         }
       );
     },
@@ -87,7 +87,7 @@ export function FarmPage() {
       culture_type: "",
       variety: "",
       crop_stage: "",
-      block_id: null,
+      block_id: farm.blocks?.[0]?.id ?? 0,
     });
   }
 
@@ -156,24 +156,29 @@ export function FarmPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
             <div className="space-y-1">
-              <label className="text-xs text-slate-600">Bloc</label>
+              <label className="text-xs text-slate-600">Bloc *</label>
               <select
                 className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-100"
-                value={newParcel.block_id ?? ""}
+                value={newParcel.block_id ? String(newParcel.block_id) : ""}
                 onChange={(e) =>
                   setNewParcel({
                     ...newParcel,
-                    block_id: e.target.value ? Number(e.target.value) : null,
+                    block_id: e.target.value ? Number(e.target.value) : 0,
                   })
                 }
+                disabled={!farm.blocks?.length}
               >
-                <option value="">Sans bloc</option>
                 {farm.blocks?.map((block) => (
                   <option key={block.id} value={block.id}>
                     {block.name} {block.type ? `(${block.type})` : ""}
                   </option>
                 ))}
               </select>
+              {!farm.blocks?.length && (
+                <div className="text-[11px] text-red-600">
+                  Aucun bloc disponible pour cette exploitation.
+                </div>
+              )}
             </div>
           </div>
 
@@ -221,7 +226,8 @@ export function FarmPage() {
                 if (
                   !newParcel.name.trim() ||
                   !newParcel.culture_type.trim() ||
-                  !newParcel.crop_stage.trim()
+                  !newParcel.crop_stage.trim() ||
+                  !newParcel.block_id
                 ) {
                   return;
                 }
@@ -386,17 +392,17 @@ function ParcelCard({
         <Button
           size="xs"
           onClick={() => {
-            setEditingParcelId(parcel.id);
-            setEditParcelForm({
-              name: parcel.name,
-              surface_ha: parcel.surface_ha?.toString() ?? "",
-              culture_type: parcel.culture_type,
-              variety: parcel.variety ?? "",
-              crop_stage: parcel.crop_stage,
-              block_id: parcel.block_id?.toString() ?? "",
-            });
-          }}
-        >
+              setEditingParcelId(parcel.id);
+              setEditParcelForm({
+                name: parcel.name,
+                surface_ha: parcel.surface_ha?.toString() ?? "",
+                culture_type: parcel.culture_type,
+                variety: parcel.variety ?? "",
+                crop_stage: parcel.crop_stage,
+                block_id: parcel.block_id ? parcel.block_id.toString() : "",
+              });
+            }}
+          >
           Modifier
         </Button>
         <Button
@@ -509,7 +515,7 @@ function EditableParcelCard({
           />
         </div>
         <div className="space-y-1">
-          <label className="text-slate-600">Bloc</label>
+          <label className="text-slate-600">Bloc *</label>
           <select
             className="w-full rounded border border-slate-200 bg-white px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-100"
             value={editParcelForm.block_id}
@@ -519,8 +525,8 @@ function EditableParcelCard({
                 block_id: e.target.value,
               })
             }
+            disabled={!blocks?.length}
           >
-            <option value="">Sans bloc</option>
             {blocks?.map((block) => (
               <option key={block.id} value={block.id}>
                 {block.name}
@@ -534,27 +540,26 @@ function EditableParcelCard({
         <Button size="xs" onClick={() => setEditingParcelId(null)}>
           Annuler
         </Button>
-        <Button
-          variant="primary"
-          size="xs"
-          onClick={() =>
-            updateParcelMutation.mutate({
-              id: parcel.id,
-              payload: {
-                name: editParcelForm.name,
-                culture_type: editParcelForm.culture_type,
-                variety: editParcelForm.variety || null,
-                crop_stage: editParcelForm.crop_stage,
-                surface_ha: editParcelForm.surface_ha
-                  ? Number(editParcelForm.surface_ha)
-                  : null,
-                block_id: editParcelForm.block_id
-                  ? Number(editParcelForm.block_id)
-                  : null,
-              },
-            })
-          }
-        >
+          <Button
+            variant="primary"
+            size="xs"
+            onClick={() =>
+              editParcelForm.block_id &&
+              updateParcelMutation.mutate({
+                id: parcel.id,
+                payload: {
+                  name: editParcelForm.name,
+                  culture_type: editParcelForm.culture_type,
+                  variety: editParcelForm.variety || null,
+                  crop_stage: editParcelForm.crop_stage,
+                  surface_ha: editParcelForm.surface_ha
+                    ? Number(editParcelForm.surface_ha)
+                    : null,
+                block_id: Number(editParcelForm.block_id),
+                },
+              })
+            }
+          >
           Enregistrer
         </Button>
       </div>

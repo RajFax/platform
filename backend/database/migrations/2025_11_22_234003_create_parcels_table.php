@@ -14,7 +14,7 @@ public function up(): void
     Schema::create('parcels', function (Blueprint $table) {
         $table->id();
         $table->foreignId('farm_id')->constrained()->cascadeOnDelete();
-        $table->foreignId('block_id')->nullable()->constrained()->nullOnDelete();
+        $table->foreignId('block_id')->constrained()->cascadeOnDelete();
 
         $table->string('name');
         $table->decimal('surface_ha', 8, 2)->nullable();

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Farm;
+use App\Models\Block;
 use App\Models\Parcel;
 use App\Models\Zone;
 use App\Models\Sensor;
@@ -26,9 +27,16 @@ class DemoDataSeeder extends Seeder
             'description' => 'Ferme de démonstration pour la plateforme.',
         ]);
 
+        $block = Block::create([
+            'farm_id' => $farm->id,
+            'name' => 'Bloc principal',
+            'type' => 'openfield',
+            'description' => 'Bloc de démonstration',
+        ]);
+
         $parcel = Parcel::create([
             'farm_id' => $farm->id,
-            'block_id' => null,
+            'block_id' => $block->id,
             'name' => 'Parcelle Tomates Nord',
             'surface_ha' => 1.2,
             'description' => 'Tomates sous serre',

@@ -5,7 +5,7 @@ import { type BlockType } from "./blocks";
 export interface ParcelDTO {
   id: number;
   farm_id: number;
-  block_id: number | null;
+  block_id: number;
   block?: { id: number; name: string; farm_id: number; type?: BlockType } | null;
   name: string;
   surface_ha: number | null;
@@ -22,7 +22,7 @@ export interface ParcelDTO {
 
 export interface ParcelCreatePayload {
   farm_id: number;
-  block_id?: number | null;
+  block_id: number;
   name: string;
   surface_ha?: number | null;
   description?: string | null;
@@ -51,7 +51,7 @@ export interface ParcelUpdatePayload {
   target_temp_min?: number | null;
   target_temp_max?: number | null;
 
-  block_id?: number | null;
+  block_id?: number;
 }
 
 export async function createParcel(
@@ -77,7 +77,7 @@ export async function deleteParcel(id: number): Promise<void> {
 export interface ParcelSummary {
   id: number;
   farm_id: number;
-  block_id: number | null;
+  block_id: number;
   block?: { id: number; name: string; farm_id: number } | null;
   name: string;
   surface_ha: number | null;
