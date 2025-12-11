@@ -14,7 +14,7 @@ interface ParcelZone {
 interface ParcelDetail {
   id: number;
   farm_id: number;
-  block_id: number | null;
+  block_id: number;
   name: string;
   surface_ha: number | null;
   description: string | null;

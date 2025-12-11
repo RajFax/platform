@@ -1,5 +1,5 @@
 // src/pages/ParcelsPage.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useQuery,
   useMutation,
@@ -18,6 +18,23 @@ import { fetchFarms, type FarmSummary } from "../api/farms";
 import { Card } from "../components/ui/Card";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
+
+const CULTURE_TYPES = [
+  "Tomate",
+  "Salade",
+  "Blé",
+  "Maïs",
+  "Vigne",
+  "Betterave",
+];
+
+const CROP_STAGES = [
+  "VEGETATIVE",
+  "FLOWERING",
+  "FRUITING",
+  "MATURATION",
+  "POST_HARVEST",
+];
 
 export function ParcelsPage() {
   const queryClient = useQueryClient();
@@ -64,6 +81,12 @@ export function ParcelsPage() {
   const selectedFarmId = Number(form.farm_id) || null;
   const availableBlocks =
     farms?.find((farm) => farm.id === selectedFarmId)?.blocks ?? [];
+
+  useEffect(() => {
+    if (availableBlocks.length > 0 && !form.block_id) {
+      setForm((prev) => ({ ...prev, block_id: String(availableBlocks[0].id) }));
+    }
+  }, [availableBlocks, form.block_id]);
 
   const createMutation = useMutation({
     mutationFn: (payload: ParcelCreatePayload) => createParcel(payload),
@@ -144,8 +167,7 @@ export function ParcelsPage() {
     setErrorMsg(null);
 
     const farmIdNum = Number(form.farm_id);
-    const blockIdNum =
-      form.block_id.trim() === "" ? null : Number(form.block_id.trim());
+    const blockIdNum = Number(form.block_id.trim());
     const surfaceNum =
       form.surface_ha.trim() === "" ? undefined : Number(form.surface_ha);
 
@@ -163,8 +185,18 @@ export function ParcelsPage() {
       return;
     }
 
-    if (form.block_id.trim() !== "" && (blockIdNum === null || isNaN(blockIdNum))) {
-      setErrorMsg("Le bloc doit être un identifiant valide ou vide.");
+    if (!selectedFarmId) {
+      setErrorMsg("L'exploitation (farm_id) est obligatoire.");
+      return;
+    }
+
+    if (availableBlocks.length === 0) {
+      setErrorMsg("Aucun bloc disponible pour cette exploitation.");
+      return;
+    }
+
+    if (form.block_id.trim() === "" || Number.isNaN(blockIdNum)) {
+      setErrorMsg("Le bloc est obligatoire.");
       return;
     }
 
@@ -384,7 +416,7 @@ export function ParcelsPage() {
               </div>
 
               <div>
-                <label className="block text-slate-600 mb-1">Bloc (optionnel)</label>
+                <label className="block text-slate-600 mb-1">Bloc *</label>
                 <select
                   className="w-full"
                   value={form.block_id}
@@ -393,7 +425,6 @@ export function ParcelsPage() {
                   }
                   disabled={!selectedFarmId || availableBlocks.length === 0}
                 >
-                  <option value="">Sans bloc</option>
                   {availableBlocks.map((block) => (
                     <option key={block.id} value={block.id}>
                       {block.name} {block.type ? `(${block.type})` : ""}
@@ -436,14 +467,20 @@ export function ParcelsPage() {
               <label className="block text-slate-600 mb-1">
                 Culture *
               </label>
-              <input
-                type="text"
+              <select
                 className="w-full"
                 value={form.culture_type}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, culture_type: e.target.value }))
                 }
-              />
+              >
+                <option value="">Sélectionner un type de culture</option>
+                {CULTURE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {!editingParcel && (
@@ -451,15 +488,20 @@ export function ParcelsPage() {
                 <label className="block text-slate-600 mb-1">
                   Stade de culture (crop_stage) *
                 </label>
-                <input
-                  type="text"
+                <select
                   className="w-full"
                   value={form.crop_stage}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, crop_stage: e.target.value }))
                   }
-                  placeholder="VEGETATIVE, FLOWERING..."
-                />
+                >
+                  <option value="">Sélectionner un stade</option>
+                  {CROP_STAGES.map((stage) => (
+                    <option key={stage} value={stage}>
+                      {stage}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 

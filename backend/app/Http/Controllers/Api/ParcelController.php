@@ -10,6 +10,23 @@ use Illuminate\Validation\Rule;
 
 class ParcelController extends Controller
 {
+    private const CULTURE_TYPES = [
+        'Tomate',
+        'Salade',
+        'Blé',
+        'Maïs',
+        'Vigne',
+        'Betterave',
+    ];
+
+    private const CROP_STAGES = [
+        'VEGETATIVE',
+        'FLOWERING',
+        'FRUITING',
+        'MATURATION',
+        'POST_HARVEST',
+    ];
+
     // GET /api/parcels?farm_id=...
     public function index(Request $request)
     {
@@ -38,7 +55,7 @@ class ParcelController extends Controller
         $data = $request->validate([
             'farm_id'       => ['required', 'exists:farms,id'],
             'block_id'      => [
-                'nullable',
+                'required',
                 Rule::exists('blocks', 'id')->where(
                     fn ($query) => $query->where('farm_id', $request->integer('farm_id'))
                 ),
@@ -46,9 +63,9 @@ class ParcelController extends Controller
             'name'          => ['required', 'string', 'max:255'],
             'surface_ha'    => ['nullable', 'numeric', 'min:0'],
             'description'   => ['nullable', 'string'],
-            'culture_type'  => ['required', 'string', 'max:255'],
+            'culture_type'  => ['required', 'string', 'max:255', Rule::in(self::CULTURE_TYPES)],
             'variety'       => ['nullable', 'string', 'max:255'],
-            'crop_stage'    => ['required', 'string', 'max:255'],
+            'crop_stage'    => ['required', 'string', 'max:255', Rule::in(self::CROP_STAGES)],
 
             'planting_date' => ['nullable', 'date'],
             'target_soil_moisture_min' => ['nullable', 'numeric'],
@@ -73,7 +90,7 @@ class ParcelController extends Controller
             'farm_id'       => ['sometimes', 'required', 'exists:farms,id'],
             'block_id'      => [
                 'sometimes',
-                'nullable',
+                'required',
                 Rule::exists('blocks', 'id')->where(
                     fn ($query) => $query->where('farm_id', $farmIdForBlock)
                 ),
@@ -81,9 +98,9 @@ class ParcelController extends Controller
             'name'          => ['sometimes', 'required', 'string', 'max:255'],
             'surface_ha'    => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'description'   => ['sometimes', 'nullable', 'string'],
-            'culture_type'  => ['sometimes', 'required', 'string', 'max:255'],
+            'culture_type'  => ['sometimes', 'required', 'string', 'max:255', Rule::in(self::CULTURE_TYPES)],
             'variety'       => ['sometimes', 'nullable', 'string', 'max:255'],
-            'crop_stage'    => ['sometimes', 'required', 'string', 'max:255'],
+            'crop_stage'    => ['sometimes', 'required', 'string', 'max:255', Rule::in(self::CROP_STAGES)],
 
             'planting_date' => ['sometimes', 'nullable', 'date'],
             'target_soil_moisture_min' => ['sometimes', 'nullable', 'numeric'],

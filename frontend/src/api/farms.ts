@@ -26,7 +26,7 @@ export interface FarmParcelLight {
   culture_type: string;
   variety: string | null;
   crop_stage: string;
-  block_id: number | null;
+  block_id: number;
   block?: FarmBlockLight | null;
   zones?: { id: number; name: string; is_active: boolean }[];
 }
