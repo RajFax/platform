@@ -14,15 +14,9 @@ use App\Http\Controllers\Api\StrategyController;
 use App\Http\Controllers\Api\AlertController;
 
 // -------------------------------
-// TEST DASHBOARD SIMPLE
+// DASHBOARD
 // -------------------------------
-Route::get('/dashboard/overview', function () {
-    return response()->json([
-        'status' => 'ok',
-        'source' => 'routes/api.php',
-        'time'   => now()->toDateTimeString(),
-    ]);
-});
+Route::get('/dashboard/overview', [FarmController::class, 'overview']);
 
 // -------------------------------
 // FARMS
