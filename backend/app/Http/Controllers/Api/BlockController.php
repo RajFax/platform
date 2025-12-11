@@ -10,12 +10,18 @@ use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class BlockController extends Controller
 {
     // GET /api/blocks?farm_id=...
     public function index(Request $request)
     {
+        $schemaCheck = $this->assertBlockSchema();
+        if ($schemaCheck !== null) {
+            return $schemaCheck;
+        }
+
         $query = Block::query()
             ->with(['farm:id,name'])
             ->withCount('parcels')
@@ -25,7 +31,18 @@ class BlockController extends Controller
             $query->where('farm_id', $request->integer('farm_id'));
         }
 
-        return response()->json($query->get());
+        try {
+            return response()->json($query->get());
+        } catch (QueryException $e) {
+            Log::error('Failed to list blocks', [
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => "Impossible de récupérer les blocs : vérifiez que la base de données est configurée et que les migrations sont à jour.",
+            ], 500);
+        }
     }
 
     // GET /api/blocks/{block}
@@ -136,30 +153,40 @@ class BlockController extends Controller
     {
         $blockColumns = ['id', 'farm_id', 'name', 'type', 'description', 'created_at', 'updated_at'];
 
-        if (! Schema::hasTable('blocks')) {
-            Log::error('Blocks table missing during creation request');
+        try {
+            if (! Schema::hasTable('blocks')) {
+                Log::error('Blocks table missing during creation request');
 
-            return response()->json([
-                'message' => "La base de données n'est pas à jour : exécutez les migrations (php artisan migrate) avant d'ajouter un bloc.",
-            ], 500);
-        }
+                return response()->json([
+                    'message' => "La base de données n'est pas à jour : exécutez les migrations (php artisan migrate) avant d'ajouter un bloc.",
+                ], 500);
+            }
 
-        if (! Schema::hasTable('farms')) {
-            Log::error('Farms table missing during block creation');
+            if (! Schema::hasTable('farms')) {
+                Log::error('Farms table missing during block creation');
 
-            return response()->json([
-                'message' => "La base de données n'est pas à jour : la table 'farms' est absente. Relancez les migrations.",
-            ], 500);
-        }
+                return response()->json([
+                    'message' => "La base de données n'est pas à jour : la table 'farms' est absente. Relancez les migrations.",
+                ], 500);
+            }
 
-        $missingColumns = array_filter($blockColumns, fn ($column) => ! Schema::hasColumn('blocks', $column));
-        if (! empty($missingColumns)) {
-            Log::error('Blocks table columns missing during creation', [
-                'missing_columns' => array_values($missingColumns),
+            $missingColumns = array_filter($blockColumns, fn ($column) => ! Schema::hasColumn('blocks', $column));
+            if (! empty($missingColumns)) {
+                Log::error('Blocks table columns missing during creation', [
+                    'missing_columns' => array_values($missingColumns),
+                ]);
+
+                return response()->json([
+                    'message' => "Schéma incomplet pour 'blocks' : relancez les migrations pour créer les colonnes manquantes (" . implode(', ', $missingColumns) . ').',
+                ], 500);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Schema check failed for blocks', [
+                'message' => $e->getMessage(),
             ]);
 
             return response()->json([
-                'message' => "Schéma incomplet pour 'blocks' : relancez les migrations pour créer les colonnes manquantes (" . implode(', ', $missingColumns) . ').',
+                'message' => "Impossible de vérifier le schéma de la base : vérifiez la connexion et les migrations.",
             ], 500);
         }
 
