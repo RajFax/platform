@@ -10,12 +10,18 @@ use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class BlockController extends Controller
 {
     // GET /api/blocks?farm_id=...
     public function index(Request $request)
     {
+        $schemaCheck = $this->assertBlockSchema();
+        if ($schemaCheck !== null) {
+            return $schemaCheck;
+        }
+
         $query = Block::query()
             ->with(['farm:id,name'])
             ->withCount('parcels')
