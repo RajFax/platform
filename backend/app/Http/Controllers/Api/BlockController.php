@@ -68,16 +68,10 @@ class BlockController extends Controller
                 ], 422);
             }
 
-            if (in_array($sqlState, ['23000', '23503'])) {
+            if (in_array($e->getCode(), ['23000', '23503'])) {
                 return response()->json([
                     'message' => "Impossible d'enregistrer le bloc : l'exploitation associée est introuvable ou a été supprimée.",
                 ], 422);
-            }
-
-            if (in_array($sqlState, ['42S02', '42S22'])) {
-                return response()->json([
-                    'message' => "La base de données n'est pas à jour : vérifiez que les migrations ont bien été exécutées.",
-                ], 500);
             }
 
             throw $e;
