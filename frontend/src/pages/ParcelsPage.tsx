@@ -215,6 +215,28 @@ export function ParcelsPage() {
       return;
     }
 
+    const soilMin = parseNumOr(form.target_soil_moisture_min);
+    const soilMax = parseNumOr(form.target_soil_moisture_max);
+    if ((soilMin != null && (soilMin < 0 || soilMin > 100)) || (soilMax != null && (soilMax < 0 || soilMax > 100))) {
+      setErrorMsg("L'humidité cible doit être comprise entre 0 et 100 %.");
+      return;
+    }
+    if (soilMin != null && soilMax != null && soilMin > soilMax) {
+      setErrorMsg("L'humidité minimale ne peut pas dépasser l'humidité maximale.");
+      return;
+    }
+
+    const tempMin = parseNumOr(form.target_temp_min);
+    const tempMax = parseNumOr(form.target_temp_max);
+    if ((tempMin != null && (tempMin < -50 || tempMin > 80)) || (tempMax != null && (tempMax < -50 || tempMax > 80))) {
+      setErrorMsg("Les températures cibles doivent être comprises entre -50°C et 80°C.");
+      return;
+    }
+    if (tempMin != null && tempMax != null && tempMin > tempMax) {
+      setErrorMsg("La température minimale ne peut pas dépasser la température maximale.");
+      return;
+    }
+
     if (editingParcel) {
       // UPDATE : tous les champs sont optionnels
       const payload: ParcelUpdatePayload = {
@@ -401,6 +423,7 @@ export function ParcelsPage() {
                 <label className="block text-slate-600 mb-1">Exploitation *</label>
                 <select
                   className="w-full"
+                  required
                   value={form.farm_id}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, farm_id: e.target.value, block_id: "" }))
@@ -419,12 +442,14 @@ export function ParcelsPage() {
                 <label className="block text-slate-600 mb-1">Bloc *</label>
                 <select
                   className="w-full"
+                  required
                   value={form.block_id}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, block_id: e.target.value }))
                   }
                   disabled={!selectedFarmId || availableBlocks.length === 0}
                 >
+                  <option value="">Sélectionner un bloc</option>
                   {availableBlocks.map((block) => (
                     <option key={block.id} value={block.id}>
                       {block.name} {block.type ? `(${block.type})` : ""}
@@ -441,6 +466,7 @@ export function ParcelsPage() {
               <input
                 type="text"
                 className="w-full"
+                required
                 value={form.name}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, name: e.target.value }))
@@ -455,6 +481,7 @@ export function ParcelsPage() {
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 className="w-full"
                 value={form.surface_ha}
                 onChange={(e) =>
@@ -469,6 +496,7 @@ export function ParcelsPage() {
               </label>
               <select
                 className="w-full"
+                required
                 value={form.culture_type}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, culture_type: e.target.value }))
@@ -483,27 +511,27 @@ export function ParcelsPage() {
               </select>
             </div>
 
-            {!editingParcel && (
-              <div>
-                <label className="block text-slate-600 mb-1">
-                  Stade de culture (crop_stage) *
-                </label>
-                <select
-                  className="w-full"
-                  value={form.crop_stage}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, crop_stage: e.target.value }))
-                  }
-                >
-                  <option value="">Sélectionner un stade</option>
-                  {CROP_STAGES.map((stage) => (
-                    <option key={stage} value={stage}>
-                      {stage}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div>
+              <label className="block text-slate-600 mb-1">
+                Stade de culture (crop_stage){" "}
+                {!editingParcel ? "*" : "(requis à la création)"}
+              </label>
+              <select
+                className="w-full"
+                required={!editingParcel}
+                value={form.crop_stage}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, crop_stage: e.target.value }))
+                }
+              >
+                <option value="">Sélectionner un stade</option>
+                {CROP_STAGES.map((stage) => (
+                  <option key={stage} value={stage}>
+                    {stage}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div>
               <label className="block text-slate-600 mb-1">
@@ -527,6 +555,8 @@ export function ParcelsPage() {
                 <input
                   type="number"
                   step="0.1"
+                  min="0"
+                  max="100"
                   className="w-full"
                   value={form.target_soil_moisture_min}
                   onChange={(e) =>
@@ -544,6 +574,8 @@ export function ParcelsPage() {
                 <input
                   type="number"
                   step="0.1"
+                  min="0"
+                  max="100"
                   className="w-full"
                   value={form.target_soil_moisture_max}
                   onChange={(e) =>
@@ -561,6 +593,8 @@ export function ParcelsPage() {
                 <input
                   type="number"
                   step="0.1"
+                  min="-50"
+                  max="80"
                   className="w-full"
                   value={form.target_temp_min}
                   onChange={(e) =>
@@ -578,6 +612,8 @@ export function ParcelsPage() {
                 <input
                   type="number"
                   step="0.1"
+                  min="-50"
+                  max="80"
                   className="w-full"
                   value={form.target_temp_max}
                   onChange={(e) =>

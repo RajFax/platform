@@ -20,10 +20,10 @@ export interface SensorDetail extends SensorSummary {
 
 export interface SensorPayload {
   name: string;
-  type?: string | null;
-  unit?: string | null;
+  type: string;
+  unit: string;
   hardware_id?: string | null;
-  zone_id?: number | null;
+  zone_id: number;
   is_active?: boolean;
 }
 
