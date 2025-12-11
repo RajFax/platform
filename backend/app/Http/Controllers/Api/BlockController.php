@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Block;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -38,6 +39,11 @@ class BlockController extends Controller
     // POST /api/blocks
     public function store(Request $request)
     {
+        $schemaCheck = $this->assertBlockSchema();
+        if ($schemaCheck !== null) {
+            return $schemaCheck;
+        }
+
         $request->merge([
             'name' => trim((string) $request->input('name', '')),
             'description' => $request->filled('description')
@@ -46,7 +52,7 @@ class BlockController extends Controller
         ]);
 
         $data = $request->validate([
-            'farm_id' => ['required', 'exists:farms,id'],
+            'farm_id' => ['required', 'integer', 'min:1', 'exists:farms,id'],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(['openfield', 'greenhouse'])],
             'description' => ['nullable', 'string', 'max:255'],
@@ -124,5 +130,39 @@ class BlockController extends Controller
         $block->delete();
 
         return response()->json(['message' => 'Block deleted'], 204);
+    }
+
+    private function assertBlockSchema(): ?JsonResponse
+    {
+        $blockColumns = ['id', 'farm_id', 'name', 'type', 'description', 'created_at', 'updated_at'];
+
+        if (! Schema::hasTable('blocks')) {
+            Log::error('Blocks table missing during creation request');
+
+            return response()->json([
+                'message' => "La base de données n'est pas à jour : exécutez les migrations (php artisan migrate) avant d'ajouter un bloc.",
+            ], 500);
+        }
+
+        if (! Schema::hasTable('farms')) {
+            Log::error('Farms table missing during block creation');
+
+            return response()->json([
+                'message' => "La base de données n'est pas à jour : la table 'farms' est absente. Relancez les migrations.",
+            ], 500);
+        }
+
+        $missingColumns = array_filter($blockColumns, fn ($column) => ! Schema::hasColumn('blocks', $column));
+        if (! empty($missingColumns)) {
+            Log::error('Blocks table columns missing during creation', [
+                'missing_columns' => array_values($missingColumns),
+            ]);
+
+            return response()->json([
+                'message' => "Schéma incomplet pour 'blocks' : relancez les migrations pour créer les colonnes manquantes (" . implode(', ', $missingColumns) . ').',
+            ], 500);
+        }
+
+        return null;
     }
 }
