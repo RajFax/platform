@@ -16,6 +16,25 @@ import {
 import { Link } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
+import { fetchZones, type ZoneSummary } from "../api/zones";
+
+const CONTROLLER_TYPES: { value: string; label: string }[] = [
+  { value: "irrigation", label: "Irrigation" },
+  { value: "fertigation", label: "Fertigation" },
+  { value: "climate", label: "Climatisation" },
+  { value: "pump", label: "Pompe / vanne" },
+];
+
+const MODES = [
+  { value: "AUTO", label: "Automatique" },
+  { value: "MANUAL", label: "Manuel" },
+];
+
+const STATUSES = [
+  { value: "ONLINE", label: "En ligne" },
+  { value: "OFFLINE", label: "Hors ligne" },
+  { value: "ERROR", label: "Erreur" },
+];
 
 export function ControllersPage() {
   const queryClient = useQueryClient();
@@ -23,6 +42,11 @@ export function ControllersPage() {
   const { data, isLoading, isError } = useQuery<ControllerItem[]>({
     queryKey: ["controllers"],
     queryFn: fetchControllers,
+  });
+
+  const { data: zones } = useQuery<ZoneSummary[]>({
+    queryKey: ["zones", "for-controllers"],
+    queryFn: fetchZones,
   });
 
   const [editing, setEditing] = useState<ControllerItem | null>(null);
@@ -109,13 +133,28 @@ export function ControllersPage() {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!form.name.trim() || !form.type.trim() || !form.mode.trim()) {
-      setErrorMsg("Nom, type et mode sont obligatoires.");
+    if (!form.zone_id || isNaN(Number(form.zone_id))) {
+      setErrorMsg("La zone est obligatoire.");
       return;
     }
 
-    if (!form.zone_id || isNaN(Number(form.zone_id))) {
-      setErrorMsg("Zone ID est obligatoire (pour l'instant).");
+    if (!form.name.trim()) {
+      setErrorMsg("Le nom du contrôleur est obligatoire.");
+      return;
+    }
+
+    if (!form.type || !CONTROLLER_TYPES.some((t) => t.value === form.type)) {
+      setErrorMsg("Sélectionnez un type de contrôleur valide.");
+      return;
+    }
+
+    if (!MODES.some((m) => m.value === form.mode)) {
+      setErrorMsg("Sélectionnez un mode valide.");
+      return;
+    }
+
+    if (!STATUSES.some((s) => s.value === form.status)) {
+      setErrorMsg("Sélectionnez un statut valide.");
       return;
     }
 
@@ -205,21 +244,31 @@ export function ControllersPage() {
           <form onSubmit={handleSubmit} className="space-y-3 text-xs">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-600 mb-1">Zone ID *</label>
-                <input
-                  type="number"
-                  className="w-full"
+                <label className="block text-slate-600 mb-1">Zone *</label>
+                <select
+                  className="w-full rounded border border-slate-200 px-2 py-1"
+                  required
                   value={form.zone_id || ""}
                   onChange={(e) =>
                     setForm({ ...form, zone_id: Number(e.target.value) })
                   }
-                />
+                >
+                  <option value="">Sélectionner une zone</option>
+                  {zones?.map((zone) => (
+                    <option key={zone.id} value={zone.id}>
+                      {zone.name}
+                      {zone.parcel?.name ? ` · ${zone.parcel.name}` : ""}
+                      {zone.farm?.name ? ` · ${zone.farm.name}` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-slate-600 mb-1">Nom *</label>
                 <input
-                  className="w-full"
+                  className="w-full rounded border border-slate-200 px-2 py-1"
                   value={form.name}
+                  required
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
               </div>
@@ -228,16 +277,24 @@ export function ControllersPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-600 mb-1">Type *</label>
-                <input
-                  className="w-full"
+                <select
+                  className="w-full rounded border border-slate-200 px-2 py-1"
+                  required
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
-                />
+                >
+                  <option value="">Sélectionner un type</option>
+                  {CONTROLLER_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-slate-600 mb-1">Niveau</label>
                 <input
-                  className="w-full"
+                  className="w-full rounded border border-slate-200 px-2 py-1"
                   value={form.level ?? ""}
                   onChange={(e) => setForm({ ...form, level: e.target.value })}
                 />
@@ -248,24 +305,31 @@ export function ControllersPage() {
               <div>
                 <label className="block text-slate-600 mb-1">Mode *</label>
                 <select
-                  className="w-full"
+                  className="w-full rounded border border-slate-200 px-2 py-1"
                   value={form.mode}
+                  required
                   onChange={(e) => setForm({ ...form, mode: e.target.value })}
                 >
-                  <option value="AUTO">AUTO</option>
-                  <option value="MANUAL">MANUAL</option>
+                  {MODES.map((mode) => (
+                    <option key={mode.value} value={mode.value}>
+                      {mode.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
                 <label className="block text-slate-600 mb-1">Statut *</label>
                 <select
-                  className="w-full"
+                  className="w-full rounded border border-slate-200 px-2 py-1"
                   value={form.status}
+                  required
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
                 >
-                  <option value="ONLINE">ONLINE</option>
-                  <option value="OFFLINE">OFFLINE</option>
-                  <option value="ERROR">ERROR</option>
+                  {STATUSES.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

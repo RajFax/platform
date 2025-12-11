@@ -5,9 +5,21 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller as BaseController;
 use App\Models\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ControllerController extends BaseController
 {
+    private const CONTROLLER_TYPES = [
+        'irrigation',
+        'fertigation',
+        'climate',
+        'pump',
+    ];
+
+    private const MODES = ['AUTO', 'MANUAL'];
+
+    private const STATUSES = ['ONLINE', 'OFFLINE', 'ERROR'];
+
     // GET /api/controllers
     public function index()
     {
@@ -33,10 +45,10 @@ class ControllerController extends BaseController
         $data = $request->validate([
             'zone_id'               => ['required', 'exists:zones,id'],
             'name'                  => ['required', 'string', 'max:255'],
-            'type'                  => ['required', 'string', 'max:255'],
+            'type'                  => ['required', 'string', 'max:255', Rule::in(self::CONTROLLER_TYPES)],
             'level'                 => ['nullable', 'string', 'max:255'],
-            'mode'                  => ['required', 'string', 'max:64'],
-            'status'                => ['nullable', 'string', 'max:32'],
+            'mode'                  => ['required', 'string', 'max:64', Rule::in(self::MODES)],
+            'status'                => ['nullable', 'string', 'max:32', Rule::in(self::STATUSES)],
             'last_communication_at' => ['nullable', 'date'],
             'metadata'              => ['nullable', 'array'],
         ]);
@@ -57,10 +69,10 @@ class ControllerController extends BaseController
         $data = $request->validate([
             'zone_id'               => ['sometimes', 'required', 'exists:zones,id'],
             'name'                  => ['sometimes', 'required', 'string', 'max:255'],
-            'type'                  => ['sometimes', 'required', 'string', 'max:255'],
+            'type'                  => ['sometimes', 'required', 'string', 'max:255', Rule::in(self::CONTROLLER_TYPES)],
             'level'                 => ['sometimes', 'nullable', 'string', 'max:255'],
-            'mode'                  => ['sometimes', 'required', 'string', 'max:64'],
-            'status'                => ['sometimes', 'nullable', 'string', 'max:32'],
+            'mode'                  => ['sometimes', 'required', 'string', 'max:64', Rule::in(self::MODES)],
+            'status'                => ['sometimes', 'nullable', 'string', 'max:32', Rule::in(self::STATUSES)],
             'last_communication_at' => ['sometimes', 'nullable', 'date'],
             'metadata'              => ['sometimes', 'nullable', 'array'],
         ]);

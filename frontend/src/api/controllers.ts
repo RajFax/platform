@@ -1,13 +1,17 @@
 // src/api/controllers.ts
 import { api } from "./client";
 
+export type ControllerType = "irrigation" | "fertigation" | "climate" | "pump";
+export type ControllerMode = "AUTO" | "MANUAL";
+export type ControllerStatus = "ONLINE" | "OFFLINE" | "ERROR";
+
 export interface ControllerItem {
   id: number;
   name: string;
-  type: string;
+  type: ControllerType;
   level: string | null;
-  mode: string;
-  status: string;
+  mode: ControllerMode;
+  status: ControllerStatus;
   last_communication_at: string | null;
   zone: {
     id: number;
@@ -27,10 +31,10 @@ export interface ControllerItem {
 export interface ControllerPayload {
   zone_id: number;
   name: string;
-  type: string;
+  type: ControllerType;
   level?: string | null;
-  mode: string;
-  status?: string;
+  mode: ControllerMode;
+  status?: ControllerStatus;
   last_communication_at?: string | null;
   metadata?: Record<string, unknown> | null;
 }
