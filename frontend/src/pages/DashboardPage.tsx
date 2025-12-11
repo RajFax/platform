@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Card } from "../components/ui/Card";
-import { fetchSensors } from "../api/sensors";
-import type { SensorSummary } from "../api/sensors";
+import { fetchSensors, SensorSummary } from "../api/sensors";
 import {
   LineChart,
   Line,
