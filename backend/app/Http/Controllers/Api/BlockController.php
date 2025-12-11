@@ -39,7 +39,7 @@ class BlockController extends Controller
             'farm_id' => ['required', 'exists:farms,id'],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(['openfield', 'greenhouse'])],
-            'description' => ['nullable', 'string'],
+            'description' => ['nullable', 'string', 'max:255'],
         ]);
 
         $block = Block::create($data);
@@ -57,7 +57,7 @@ class BlockController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'type' => ['sometimes', 'required', Rule::in(['openfield', 'greenhouse'])],
-            'description' => ['sometimes', 'nullable', 'string'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
         $block->update($data);
