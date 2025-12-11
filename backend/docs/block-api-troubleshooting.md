@@ -3,19 +3,18 @@
 Lorsque l'appel `POST /api/blocks` retourne une erreur HTTP 500, les causes les plus fréquentes concernent la base de données ou la cohérence des données d'entrée. Les points ci-dessous résument les vérifications à effectuer et la réponse attendue de l'API.
 
 ## Causes probables
-- **Schéma non migré** : la table `blocks` ou la colonne attendue n'existe pas (SQLSTATE `42S02` ou `42S22`). L'API vérifie désormais la présence des tables `blocks` et `farms` et des colonnes clés avant d'insérer un enregistrement.
+- **Schéma non migré** : la table `blocks` ou la colonne attendue n'existe pas (SQLSTATE `42S02` ou `42S22`).
 - **Clé étrangère invalide** : `farm_id` pointe vers une exploitation absente ou supprimée (SQLSTATE `23000` ou `23503`).
 - **Description trop longue** : texte > 255 caractères (SQLSTATE `22001`).
-- **Valeurs inattendues** : `type` différent de `openfield`/`greenhouse` ou `farm_id` nul/0 entraîne une réponse de validation 422 côté Laravel avant même l'insertion (contrainte `min:1`).
+- **Valeurs inattendues** : `type` différent de `openfield`/`greenhouse` ou `farm_id` nul/0 entraîne une réponse de validation 422 côté Laravel avant même l'insertion.
 
 ## Étapes de diagnostic
 1. **Consulter les logs** :
    - `tail -f storage/logs/laravel.log` pendant l'appel API.
-   - Les erreurs SQL (`QueryException`) sont journalisées avec le `sql_state`, le `farm_id` incriminé et, en cas de schéma manquant, la liste des colonnes absentes.
+   - Les erreurs SQL (`QueryException`) sont maintenant journalisées avec le `sql_state` et le `farm_id` incriminé.
 2. **Vérifier le schéma** :
    - `php artisan migrate:status` pour vérifier que les migrations sont appliquées.
    - `php artisan migrate` si les tables sont manquantes.
-   - Si l'API renvoie un message indiquant des colonnes manquantes (`id, farm_id, name, type, description, created_at, updated_at`), relancer la migration `2025_11_22_234003_create_blocks_table.php`.
 3. **Contrôler les données envoyées** :
    - S'assurer que `farm_id` correspond à une exploitation existante et non supprimée.
    - Limiter `description` à 255 caractères.
