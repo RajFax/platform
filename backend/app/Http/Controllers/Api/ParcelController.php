@@ -68,10 +68,10 @@ class ParcelController extends Controller
             'crop_stage'    => ['required', 'string', 'max:255', Rule::in(self::CROP_STAGES)],
 
             'planting_date' => ['nullable', 'date'],
-            'target_soil_moisture_min' => ['nullable', 'numeric'],
-            'target_soil_moisture_max' => ['nullable', 'numeric'],
-            'target_temp_min' => ['nullable', 'numeric'],
-            'target_temp_max' => ['nullable', 'numeric'],
+            'target_soil_moisture_min' => ['nullable', 'numeric', 'between:0,100'],
+            'target_soil_moisture_max' => ['nullable', 'numeric', 'between:0,100'],
+            'target_temp_min' => ['nullable', 'numeric', 'between:-50,80'],
+            'target_temp_max' => ['nullable', 'numeric', 'between:-50,80'],
         ]);
 
         $this->assertBlockMatchesFarm($data['block_id'] ?? null, $data['farm_id']);
@@ -103,10 +103,10 @@ class ParcelController extends Controller
             'crop_stage'    => ['sometimes', 'required', 'string', 'max:255', Rule::in(self::CROP_STAGES)],
 
             'planting_date' => ['sometimes', 'nullable', 'date'],
-            'target_soil_moisture_min' => ['sometimes', 'nullable', 'numeric'],
-            'target_soil_moisture_max' => ['sometimes', 'nullable', 'numeric'],
-            'target_temp_min' => ['sometimes', 'nullable', 'numeric'],
-            'target_temp_max' => ['sometimes', 'nullable', 'numeric'],
+            'target_soil_moisture_min' => ['sometimes', 'nullable', 'numeric', 'between:0,100'],
+            'target_soil_moisture_max' => ['sometimes', 'nullable', 'numeric', 'between:0,100'],
+            'target_temp_min' => ['sometimes', 'nullable', 'numeric', 'between:-50,80'],
+            'target_temp_max' => ['sometimes', 'nullable', 'numeric', 'between:-50,80'],
         ]);
 
         $newFarmId = $data['farm_id'] ?? $parcel->farm_id;

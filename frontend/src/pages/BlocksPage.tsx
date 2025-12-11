@@ -229,6 +229,7 @@ export function BlocksPage() {
               <label className="block text-slate-600 mb-1">Exploitation *</label>
               <select
                 className="w-full rounded border border-slate-200 px-2 py-1"
+                required
                 value={form.farm_id || ""}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, farm_id: Number(e.target.value) }))
@@ -247,6 +248,7 @@ export function BlocksPage() {
               <label className="block text-slate-600 mb-1">Nom du bloc *</label>
               <input
                 className="w-full rounded border border-slate-200 px-2 py-1"
+                required
                 value={form.name}
                 maxLength={255}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -258,6 +260,7 @@ export function BlocksPage() {
               <select
                 className="w-full rounded border border-slate-200 px-2 py-1"
                 value={form.type}
+                required
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
