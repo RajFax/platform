@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Block;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class BlockController extends Controller
 {
@@ -35,6 +37,13 @@ class BlockController extends Controller
     // POST /api/blocks
     public function store(Request $request)
     {
+        $request->merge([
+            'name' => trim((string) $request->input('name', '')),
+            'description' => $request->filled('description')
+                ? Str::limit(trim((string) $request->input('description')), 255, '')
+                : null,
+        ]);
+
         $data = $request->validate([
             'farm_id' => ['required', 'exists:farms,id'],
             'name' => ['required', 'string', 'max:255'],
@@ -42,7 +51,17 @@ class BlockController extends Controller
             'description' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $block = Block::create($data);
+        try {
+            $block = Block::create($data);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '22001') {
+                return response()->json([
+                    'message' => 'Description trop longue (255 caractères maximum).',
+                ], 422);
+            }
+
+            throw $e;
+        }
 
         return response()->json($block, 201);
     }
@@ -54,13 +73,32 @@ class BlockController extends Controller
             abort(422, 'Changing the farm of a block is not supported.');
         }
 
+        $request->merge([
+            'name' => $request->has('name') ? trim((string) $request->input('name')) : $block->name,
+            'description' => $request->has('description')
+                ? ($request->filled('description')
+                    ? Str::limit(trim((string) $request->input('description')), 255, '')
+                    : null)
+                : $block->description,
+        ]);
+
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'type' => ['sometimes', 'required', Rule::in(['openfield', 'greenhouse'])],
             'description' => ['sometimes', 'nullable', 'string', 'max:255'],
         ]);
 
-        $block->update($data);
+        try {
+            $block->update($data);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '22001') {
+                return response()->json([
+                    'message' => 'Description trop longue (255 caractères maximum).',
+                ], 422);
+            }
+
+            throw $e;
+        }
         $block->load(['farm:id,name']);
 
         return response()->json($block);
