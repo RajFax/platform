@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Zone extends Model
 {
@@ -35,6 +36,11 @@ class Zone extends Model
     public function sensors()
     {
         return $this->hasMany(Sensor::class);
+    }
+
+    public function controllers(): HasMany
+    {
+        return $this->hasMany(Controller::class);
     }
 
     public function controller()

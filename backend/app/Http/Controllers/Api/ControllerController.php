@@ -16,7 +16,13 @@ class ControllerController extends BaseController
         'pump',
     ];
 
-    private const MODES = ['AUTO', 'MANUAL'];
+    private const MODES = [
+        'AUTO',
+        'MANUAL',
+        'THRESHOLD',
+        'FUZZY',
+        'EVAPOTRANSPIRATION',
+    ];
 
     private const STATUSES = ['ONLINE', 'OFFLINE', 'ERROR'];
 
@@ -43,15 +49,19 @@ class ControllerController extends BaseController
     public function store(Request $request)
     {
         $data = $request->validate([
-            'zone_id'               => ['required', 'exists:zones,id'],
+            'zone_id'               => ['required_unless:level,FARM', 'nullable', 'exists:zones,id'],
             'name'                  => ['required', 'string', 'max:255'],
             'type'                  => ['required', 'string', 'max:255', Rule::in(self::CONTROLLER_TYPES)],
-            'level'                 => ['nullable', 'string', 'max:255'],
+            'level'                 => ['nullable', 'string', 'in:ZONE,FARM'],
             'mode'                  => ['required', 'string', 'max:64', Rule::in(self::MODES)],
             'status'                => ['nullable', 'string', 'max:32', Rule::in(self::STATUSES)],
             'last_communication_at' => ['nullable', 'date'],
             'metadata'              => ['nullable', 'array'],
         ]);
+
+        if (! isset($data['level'])) {
+            $data['level'] = 'ZONE';
+        }
 
         if (! isset($data['status'])) {
             $data['status'] = 'OFFLINE';
@@ -67,10 +77,10 @@ class ControllerController extends BaseController
     public function update(Request $request, Controller $controller)
     {
         $data = $request->validate([
-            'zone_id'               => ['sometimes', 'required', 'exists:zones,id'],
+            'zone_id'               => ['sometimes', 'required_unless:level,FARM', 'nullable', 'exists:zones,id'],
             'name'                  => ['sometimes', 'required', 'string', 'max:255'],
             'type'                  => ['sometimes', 'required', 'string', 'max:255', Rule::in(self::CONTROLLER_TYPES)],
-            'level'                 => ['sometimes', 'nullable', 'string', 'max:255'],
+            'level'                 => ['sometimes', 'nullable', 'string', 'in:ZONE,FARM'],
             'mode'                  => ['sometimes', 'required', 'string', 'max:64', Rule::in(self::MODES)],
             'status'                => ['sometimes', 'nullable', 'string', 'max:32', Rule::in(self::STATUSES)],
             'last_communication_at' => ['sometimes', 'nullable', 'date'],
