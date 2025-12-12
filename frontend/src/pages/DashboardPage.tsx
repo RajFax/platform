@@ -2,6 +2,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Card } from "../components/ui/Card";
+import { fetchZones, ZoneSummary } from "../api/zones";
+import { fetchSensors, SensorSummary } from "../api/sensors";
+import { fetchControllers, ControllerItem } from "../api/controllers";
+import { fetchAlerts, AlertItem } from "../api/alerts";
+import { useMemo } from "react";
 
 interface FarmApi {
   id: number;
@@ -119,30 +124,145 @@ async function fetchOverview(): Promise<OverviewResponse> {
 }
 
 export function DashboardPage() {
+  // Charge la synthèse générale
   const { data, isLoading, isError } = useQuery<OverviewResponse>({
     queryKey: ["overview"],
     queryFn: fetchOverview,
   });
 
-  if (isLoading) return <div>Chargement…</div>;
-  if (isError || !data) return <div>Erreur de chargement du dashboard.</div>;
+  // Charge la liste des zones (avec ferme/parcelle)
+  const {
+    data: zonesData,
+    isLoading: zonesLoading,
+    isError: zonesError,
+  } = useQuery<ZoneSummary[]>({
+    queryKey: ["zones"],
+    queryFn: () => fetchZones(),
+  });
+
+  // Charge les capteurs
+  const {
+    data: sensorsData,
+    isLoading: sensorsLoading,
+    isError: sensorsError,
+  } = useQuery<SensorSummary[]>({
+    queryKey: ["sensorsAll"],
+    queryFn: fetchSensors,
+  });
+
+  // Charge les contrôleurs
+  const {
+    data: controllersData,
+    isLoading: controllersLoading,
+    isError: controllersError,
+  } = useQuery<ControllerItem[]>({
+    queryKey: ["controllersAll"],
+    queryFn: fetchControllers,
+  });
+
+  // Charge les alertes
+  const {
+    data: alertsData,
+    isLoading: alertsLoading,
+    isError: alertsError,
+  } = useQuery<AlertItem[]>({
+    queryKey: ["alertsAll"],
+    queryFn: fetchAlerts,
+  });
+
+  // Regroupe les zones par ferme puis par parcelle et calcule les KPI de chaque zone
+  const zonesByFarmParcel = useMemo(() => {
+    if (!zonesData || !sensorsData || !controllersData || !alertsData) {
+      return {} as Record<number, Record<number, any[]>>;
+    }
+
+    const sensorsByZone: Record<number, SensorSummary[]> = {};
+    sensorsData.forEach((s) => {
+      if (s.zone_id != null) {
+        if (!sensorsByZone[s.zone_id]) sensorsByZone[s.zone_id] = [];
+        sensorsByZone[s.zone_id].push(s);
+      }
+    });
+
+    const controllersByZone: Record<number, ControllerItem[]> = {};
+    controllersData.forEach((c) => {
+      const zoneId = c.zone?.id;
+      if (zoneId != null) {
+        if (!controllersByZone[zoneId]) controllersByZone[zoneId] = [];
+        controllersByZone[zoneId].push(c);
+      }
+    });
+
+    const alertsByZone: Record<number, AlertItem[]> = {};
+    alertsData.forEach((a) => {
+      const zoneId = a.zone?.id;
+      if (zoneId != null) {
+        if (!alertsByZone[zoneId]) alertsByZone[zoneId] = [];
+        alertsByZone[zoneId].push(a);
+      }
+    });
+
+    const result: Record<number, Record<number, any[]>> = {};
+    zonesData.forEach((z) => {
+      const farmId = z.farm?.id ?? -1;
+      const parcelId = z.parcel?.id ?? -1;
+      const zoneMetrics = {
+        id: z.id,
+        name: z.name,
+        parcel: z.parcel,
+        farm: z.farm,
+        is_active: z.is_active,
+        sensors_count: sensorsByZone[z.id]?.length ?? 0,
+        controllers_count: controllersByZone[z.id]?.length ?? 0,
+        controllers_online:
+          controllersByZone[z.id]?.filter((c) => c.status === "ONLINE")
+            .length ?? 0,
+        controllers_error:
+          controllersByZone[z.id]?.filter((c) => c.status === "ERROR")
+            .length ?? 0,
+        alerts_open:
+          alertsByZone[z.id]?.filter((a) => a.status === "OPEN").length ?? 0,
+      };
+      if (!result[farmId]) result[farmId] = {};
+      if (!result[farmId][parcelId]) result[farmId][parcelId] = [];
+      result[farmId][parcelId].push(zoneMetrics);
+    });
+    return result;
+  }, [zonesData, sensorsData, controllersData, alertsData]);
+
+  // Gestion des états de chargement/erreur
+  if (
+    isLoading ||
+    zonesLoading ||
+    sensorsLoading ||
+    controllersLoading ||
+    alertsLoading
+  )
+    return <div>Chargement…</div>;
+  if (
+    isError ||
+    zonesError ||
+    sensorsError ||
+    controllersError ||
+    alertsError ||
+    !data
+  )
+    return <div>Erreur de chargement du dashboard.</div>;
 
   const s = data.stats;
 
   return (
     <div className="space-y-8">
-      {/* HEADER */}
+      {/* En-tête */}
       <header className="space-y-1">
-        <h1 className="text-3xl font-bold text-slate-900">
-          Vue d&apos;ensemble
-        </h1>
+        <h1 className="text-3xl font-bold text-slate-900">Vue d&apos;ensemble</h1>
         <p className="text-sm text-slate-500 max-w-xl">
           Synthèse des exploitations, parcelles, zones, capteurs,
           contrôleurs et alertes.
         </p>
       </header>
 
-      {/* STAT CARDS */}
+      {/* Cartes de statistiques */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl">
         <StatCard label="Exploitations" value={s.farms} />
         <StatCard label="Parcelles" value={s.parcels} />
@@ -151,50 +271,96 @@ export function DashboardPage() {
         <StatCard label="Zones inactives" value={s.inactive_zones} />
         <StatCard label="Capteurs" value={s.sensors} />
         <StatCard label="Contrôleurs" value={s.controllers} />
-        <StatCard
-          label="Contrôleurs en ligne"
-          value={s.controllers_online}
-        />
-        <StatCard
-          label="Contrôleurs en erreur"
-          value={s.controllers_error}
-        />
+        <StatCard label="Contrôleurs en ligne" value={s.controllers_online} />
+        <StatCard label="Contrôleurs en erreur" value={s.controllers_error} />
         <StatCard label="Alertes ouvertes" value={s.alerts_open} />
       </div>
 
-      {/* BLOC EXPLOITATIONS + ALERTES */}
+      {/* Exploitations / Parcelles / Zones + Alertes récentes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl">
-        {/* Exploitations récentes */}
         <Card>
           <div className="text-sm font-semibold mb-3 text-slate-800">
-            Exploitations
+            Exploitations, parcelles et zones
           </div>
           {data.farms.length === 0 ? (
             <div className="text-xs text-slate-500">
               Aucune exploitation enregistrée.
             </div>
           ) : (
-            <div className="space-y-2 text-xs">
-              {data.farms.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-white shadow-sm"
-                >
-                  <div>
-                    <div className="text-slate-800 font-medium">
-                      {f.name}
+            <div className="space-y-4">
+              {data.farms.map((farm) => {
+                const farmZones = zonesByFarmParcel[farm.id] || {};
+                const parcelIds = Object.keys(farmZones);
+                if (parcelIds.length === 0) {
+                  return (
+                    <div
+                      key={farm.id}
+                      className="border border-slate-200 rounded-lg p-3 bg-white shadow-sm text-xs"
+                    >
+                      <div className="font-medium text-slate-800">
+                        {farm.name}
+                      </div>
+                      <div className="text-slate-500">Aucune zone</div>
                     </div>
-                    <div className="text-slate-500 text-xs">
-                      Parcelles : {f.parcels_count}
+                  );
+                }
+                return (
+                  <div
+                    key={farm.id}
+                    className="border border-slate-200 rounded-lg p-3 bg-white shadow-sm"
+                  >
+                    <div className="font-medium text-slate-800 mb-2">
+                      {farm.name}
+                    </div>
+                    <div className="space-y-3 text-xs">
+                      {parcelIds.map((parcelId) => {
+                        const zoneList: any[] = farmZones[parcelId];
+                        if (!zoneList || zoneList.length === 0) return null;
+                        const parcelName =
+                          zoneList[0].parcel?.name ?? `Parcelle ${parcelId}`;
+                        return (
+                          <div key={parcelId}>
+                            <div className="font-medium text-slate-700 mb-1">
+                              {parcelName}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {zoneList.map((zone) => (
+                                <div
+                                  key={zone.id}
+                                  className="border border-slate-200 rounded-lg p-3 bg-gray-50"
+                                >
+                                  <div className="font-medium text-slate-800 text-sm">
+                                    {zone.name}
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-slate-600">
+                                    Capteurs : {zone.sensors_count}
+                                  </div>
+                                  <div className="text-[11px] text-slate-600">
+                                    Contrôleurs : {zone.controllers_count}
+                                  </div>
+                                  <div className="text-[11px] text-slate-600">
+                                    Contrôleurs en ligne : {zone.controllers_online}
+                                  </div>
+                                  <div className="text-[11px] text-slate-600">
+                                    Contrôleurs en erreur : {zone.controllers_error}
+                                  </div>
+                                  <div className="text-[11px] text-slate-600">
+                                    Alertes ouvertes : {zone.alerts_open}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
 
-        {/* Alertes récentes */}
         <Card>
           <div className="text-sm font-semibold mb-3 text-slate-700">
             Alertes récentes
@@ -220,12 +386,9 @@ function StatCard({ label, value }: { label: string; value: number }) {
 function RecentAlertsList({ alerts }: { alerts: OverviewAlert[] }) {
   if (alerts.length === 0) {
     return (
-      <div className="text-xs text-slate-500">
-        Aucune alerte récente.
-      </div>
+      <div className="text-xs text-slate-500">Aucune alerte récente.</div>
     );
   }
-
   return (
     <div className="space-y-2 text-xs max-h-48 overflow-auto">
       {alerts.map((a) => {
@@ -235,7 +398,6 @@ function RecentAlertsList({ alerts }: { alerts: OverviewAlert[] }) {
             : a.severity === "WARNING"
             ? "text-amber-600"
             : "text-slate-700";
-
         return (
           <div
             key={a.id}
@@ -266,4 +428,3 @@ function RecentAlertsList({ alerts }: { alerts: OverviewAlert[] }) {
     </div>
   );
 }
-// src/pages/DashboardPage.tsx
