@@ -12,6 +12,14 @@ use Illuminate\Validation\ValidationException;
 
 class ZoneController extends Controller
 {
+    private const STRATEGY_TYPES = [
+        'MANUAL',
+        'THRESHOLD',
+        'FUZZY',
+        'EVAPOTRANSPIRATION',
+        'ET',
+    ];
+
     // GET /api/zones?farm_id=&parcel_id=
     public function index(Request $request)
     {

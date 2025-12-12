@@ -87,6 +87,18 @@ class ControllerController extends BaseController
             'metadata'              => ['sometimes', 'nullable', 'array'],
         ]);
 
+        $level = $data['level'] ?? $controller->level ?? 'ZONE';
+        $zoneId = $data['zone_id'] ?? $controller->zone_id;
+
+        if ($level !== 'FARM' && ! $zoneId) {
+            return response()->json([
+                'message' => 'Zone is required for controllers with level other than FARM.',
+                'errors' => [
+                    'zone_id' => ['Zone is required for controllers with level other than FARM.'],
+                ],
+            ], 422);
+        }
+
         $controller->update($data);
         $controller->load(['zone.parcel.farm']);
 
