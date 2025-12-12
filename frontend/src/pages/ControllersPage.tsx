@@ -28,6 +28,9 @@ const CONTROLLER_TYPES: { value: string; label: string }[] = [
 const MODES = [
   { value: "AUTO", label: "Automatique" },
   { value: "MANUAL", label: "Manuel" },
+  { value: "THRESHOLD", label: "Seuil" },
+  { value: "FUZZY", label: "Flou" },
+  { value: "EVAPOTRANSPIRATION", label: "Evapotranspiration" },
 ];
 
 const STATUSES = [
@@ -51,10 +54,10 @@ export function ControllersPage() {
 
   const [editing, setEditing] = useState<ControllerItem | null>(null);
   const [form, setForm] = useState<ControllerPayload>({
-    zone_id: 0,
+    zone_id: null,
     name: "",
     type: "",
-    level: "",
+    level: "ZONE",
     mode: "AUTO",
     status: "OFFLINE",
   });
@@ -100,10 +103,10 @@ export function ControllersPage() {
   function resetForm() {
     setEditing(null);
     setForm({
-      zone_id: 0,
+      zone_id: null,
       name: "",
       type: "",
-      level: "",
+      level: "ZONE",
       mode: "AUTO",
       status: "OFFLINE",
     });
@@ -114,10 +117,10 @@ export function ControllersPage() {
   function handleEdit(ctrl: ControllerItem) {
     setEditing(ctrl);
     setForm({
-      zone_id: ctrl.zone?.id ?? 0,
+      zone_id: ctrl.zone?.id ?? null,
       name: ctrl.name,
       type: ctrl.type,
-      level: ctrl.level ?? "",
+      level: ctrl.level ?? "ZONE",
       mode: ctrl.mode,
       status: ctrl.status,
     });
@@ -133,8 +136,10 @@ export function ControllersPage() {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!form.zone_id || isNaN(Number(form.zone_id))) {
-      setErrorMsg("La zone est obligatoire.");
+    if (form.level !== "FARM" && (!form.zone_id || isNaN(Number(form.zone_id)))) {
+      setErrorMsg(
+        "La zone est obligatoire pour un contrôleur de niveau ZONE."
+      );
       return;
     }
 
@@ -159,10 +164,11 @@ export function ControllersPage() {
     }
 
     const payload: ControllerPayload = {
-      zone_id: Number(form.zone_id),
+      zone_id:
+        form.level === "FARM" || !form.zone_id ? null : Number(form.zone_id),
       name: form.name.trim(),
       type: form.type.trim(),
-      level: form.level?.trim() || null,
+      level: form.level?.trim() || "ZONE",
       mode: form.mode.trim(),
       status: form.status || "OFFLINE",
     };
@@ -247,10 +253,14 @@ export function ControllersPage() {
                 <label className="block text-slate-600 mb-1">Zone *</label>
                 <select
                   className="w-full rounded border border-slate-200 px-2 py-1"
-                  required
-                  value={form.zone_id || ""}
+                  required={form.level !== "FARM"}
+                  disabled={form.level === "FARM"}
+                  value={form.zone_id ?? ""}
                   onChange={(e) =>
-                    setForm({ ...form, zone_id: Number(e.target.value) })
+                    setForm({
+                      ...form,
+                      zone_id: e.target.value ? Number(e.target.value) : null,
+                    })
                   }
                 >
                   <option value="">Sélectionner une zone</option>
@@ -293,11 +303,21 @@ export function ControllersPage() {
               </div>
               <div>
                 <label className="block text-slate-600 mb-1">Niveau</label>
-                <input
+                <select
                   className="w-full rounded border border-slate-200 px-2 py-1"
-                  value={form.level ?? ""}
-                  onChange={(e) => setForm({ ...form, level: e.target.value })}
-                />
+                  value={form.level ?? "ZONE"}
+                  onChange={(e) => {
+                    const level = e.target.value;
+                    setForm({
+                      ...form,
+                      level,
+                      zone_id: level === "FARM" ? null : form.zone_id,
+                    });
+                  }}
+                >
+                  <option value="ZONE">Zone</option>
+                  <option value="FARM">Exploitation</option>
+                </select>
               </div>
             </div>
 
