@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Zone;
+use App\Support\StrategyDefinition;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ZoneController extends Controller
 {
@@ -72,15 +76,18 @@ class ZoneController extends Controller
             'surface_ha' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
 
-            'irrigation_strategy_type' => ['nullable', 'string', 'max:255'],
+            'irrigation_strategy_type' => ['nullable', 'string', Rule::in(StrategyDefinition::TYPES)],
             'irrigation_strategy_params' => ['nullable', 'array'],
-            'fertilization_strategy_type' => ['nullable', 'string', 'max:255'],
+            'fertilization_strategy_type' => ['nullable', 'string', Rule::in(StrategyDefinition::TYPES)],
             'fertilization_strategy_params' => ['nullable', 'array'],
         ]);
 
         if (!array_key_exists('is_active', $data)) {
             $data['is_active'] = true;
         }
+
+        $this->validateStrategyParams($request, 'irrigation');
+        $this->validateStrategyParams($request, 'fertilization');
 
         $zone = Zone::create($data);
         $zone->load(['parcel.farm']);
@@ -98,15 +105,18 @@ class ZoneController extends Controller
             'surface_ha' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
 
-            'irrigation_strategy_type' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'irrigation_strategy_type' => ['sometimes', 'nullable', 'string', Rule::in(StrategyDefinition::TYPES)],
             'irrigation_strategy_params' => ['sometimes', 'nullable', 'array'],
-            'fertilization_strategy_type' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'fertilization_strategy_type' => ['sometimes', 'nullable', 'string', Rule::in(StrategyDefinition::TYPES)],
             'fertilization_strategy_params' => ['sometimes', 'nullable', 'array'],
         ]);
 
         if (!array_key_exists('parcel_id', $data)) {
             $data['parcel_id'] = $zone->parcel_id;
         }
+
+        $this->validateStrategyParams($request, 'irrigation', $zone->irrigation_strategy_type);
+        $this->validateStrategyParams($request, 'fertilization', $zone->fertilization_strategy_type);
 
         $zone->update($data);
         $zone->refresh()->load(['parcel.farm']);
@@ -121,4 +131,32 @@ class ZoneController extends Controller
 
         return response()->json(['message' => 'Zone deleted'], 204);
     }
+
+    private function validateStrategyParams(Request $request, string $prefix, ?string $existingType = null): void
+    {
+        $typeKey = "{$prefix}_strategy_type";
+        $paramsKey = "{$prefix}_strategy_params";
+
+        $type = $request->input($typeKey, $existingType);
+        $params = $request->input($paramsKey);
+
+        if ($params === null) {
+            return;
+        }
+
+        if ($type === null) {
+            throw ValidationException::withMessages([
+                $typeKey => __('validation.required', ['attribute' => str_replace('_', ' ', $typeKey)]),
+            ]);
+        }
+
+        $rules = StrategyDefinition::paramRules($type);
+
+        Validator::make($params, $rules, attributes: [
+            'inputs.soil_sensor_id' => __('inputs soil sensor'),
+            'inputs.et0_sensor_id' => __('inputs et0 sensor'),
+            'inputs.rain_sensor_id' => __('inputs rain sensor'),
+        ])->validate();
+    }
+
 }

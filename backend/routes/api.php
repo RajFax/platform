@@ -6,12 +6,15 @@ use App\Http\Controllers\Api\FarmController;
 use App\Http\Controllers\Api\BlockController;
 use App\Http\Controllers\Api\ParcelController;
 use App\Http\Controllers\Api\ZoneController;
+use App\Http\Controllers\Api\ZoneKpiController;
 use App\Http\Controllers\Api\SensorController;
 use App\Http\Controllers\Api\MeasurementController;
 use App\Http\Controllers\Api\ControllerController;
 use App\Http\Controllers\Api\WeatherStationController;
 use App\Http\Controllers\Api\StrategyController;
+use App\Http\Controllers\Api\StrategyTestController;
 use App\Http\Controllers\Api\AlertController;
+use App\Http\Controllers\Api\ActionStatsController;
 
 // -------------------------------
 // DASHBOARD
@@ -50,6 +53,7 @@ Route::delete('/parcels/{parcel}', [ParcelController::class, 'destroy']);
 // -------------------------------
 Route::get('/zones', [ZoneController::class, 'index']);
 Route::get('/zones/{zone}', [ZoneController::class, 'show']);
+Route::get('/zones/{zone}/kpi', [ZoneKpiController::class, 'show']);
 Route::post('/zones', [ZoneController::class, 'store']);
 Route::put('/zones/{zone}', [ZoneController::class, 'update']);
 Route::delete('/zones/{zone}', [ZoneController::class, 'destroy']);
@@ -91,6 +95,12 @@ Route::delete('weather-stations/{weatherStation}', [WeatherStationController::cl
 // STRATEGIES
 // -------------------------------
 Route::get('/strategies', [StrategyController::class, 'overview']);
+Route::post('/strategies/test', StrategyTestController::class);
+
+// -------------------------------
+// ACTIONS
+// -------------------------------
+Route::get('/actions/stats', [ActionStatsController::class, 'index']);
 
 // -------------------------------
 // ALERTS

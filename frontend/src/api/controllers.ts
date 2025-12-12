@@ -2,7 +2,12 @@
 import { api } from "./client";
 
 export type ControllerType = "irrigation" | "fertigation" | "climate" | "pump";
-export type ControllerMode = "AUTO" | "MANUAL";
+export type ControllerMode =
+  | "AUTO"
+  | "MANUAL"
+  | "THRESHOLD"
+  | "FUZZY"
+  | "EVAPOTRANSPIRATION";
 export type ControllerStatus = "ONLINE" | "OFFLINE" | "ERROR";
 
 export interface ControllerItem {
@@ -29,7 +34,7 @@ export interface ControllerItem {
 }
 
 export interface ControllerPayload {
-  zone_id: number;
+  zone_id?: number | null;
   name: string;
   type: ControllerType;
   level?: string | null;
