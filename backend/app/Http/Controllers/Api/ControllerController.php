@@ -16,7 +16,13 @@ class ControllerController extends BaseController
         'pump',
     ];
 
-    private const MODES = ['AUTO', 'MANUAL'];
+    private const MODES = [
+        'AUTO',
+        'MANUAL',
+        'THRESHOLD',
+        'FUZZY',
+        'EVAPOTRANSPIRATION',
+    ];
 
     private const STATUSES = ['ONLINE', 'OFFLINE', 'ERROR'];
 
@@ -43,7 +49,7 @@ class ControllerController extends BaseController
     public function store(Request $request)
     {
         $data = $request->validate([
-            'zone_id'               => ['required', 'exists:zones,id'],
+            'zone_id'               => ['required_unless:level,FARM', 'nullable', 'exists:zones,id'],
             'name'                  => ['required', 'string', 'max:255'],
             'type'                  => ['required', 'string', 'max:255', Rule::in(self::CONTROLLER_TYPES)],
             'level'                 => ['nullable', 'string', 'max:255'],
@@ -52,6 +58,10 @@ class ControllerController extends BaseController
             'last_communication_at' => ['nullable', 'date'],
             'metadata'              => ['nullable', 'array'],
         ]);
+
+        if (! isset($data['level'])) {
+            $data['level'] = 'ZONE';
+        }
 
         if (! isset($data['status'])) {
             $data['status'] = 'OFFLINE';
@@ -67,7 +77,7 @@ class ControllerController extends BaseController
     public function update(Request $request, Controller $controller)
     {
         $data = $request->validate([
-            'zone_id'               => ['sometimes', 'required', 'exists:zones,id'],
+            'zone_id'               => ['sometimes', 'nullable', 'exists:zones,id'],
             'name'                  => ['sometimes', 'required', 'string', 'max:255'],
             'type'                  => ['sometimes', 'required', 'string', 'max:255', Rule::in(self::CONTROLLER_TYPES)],
             'level'                 => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -76,6 +86,18 @@ class ControllerController extends BaseController
             'last_communication_at' => ['sometimes', 'nullable', 'date'],
             'metadata'              => ['sometimes', 'nullable', 'array'],
         ]);
+
+        $level = $data['level'] ?? $controller->level ?? 'ZONE';
+        $zoneId = $data['zone_id'] ?? $controller->zone_id;
+
+        if ($level !== 'FARM' && ! $zoneId) {
+            return response()->json([
+                'message' => 'Zone is required for controllers with level other than FARM.',
+                'errors' => [
+                    'zone_id' => ['Zone is required for controllers with level other than FARM.'],
+                ],
+            ], 422);
+        }
 
         $controller->update($data);
         $controller->load(['zone.parcel.farm']);
