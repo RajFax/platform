@@ -5,9 +5,20 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Zone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ZoneController extends Controller
 {
+    private const STRATEGY_TYPES = [
+        'MANUAL',
+        'THRESHOLD',
+        'FUZZY',
+        'EVAPOTRANSPIRATION',
+        'ET',
+    ];
+
     // GET /api/zones?farm_id=&parcel_id=
     public function index(Request $request)
     {
@@ -72,15 +83,18 @@ class ZoneController extends Controller
             'surface_ha' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
 
-            'irrigation_strategy_type' => ['nullable', 'string', 'max:255'],
+            'irrigation_strategy_type' => ['nullable', 'string', Rule::in(self::STRATEGY_TYPES)],
             'irrigation_strategy_params' => ['nullable', 'array'],
-            'fertilization_strategy_type' => ['nullable', 'string', 'max:255'],
+            'fertilization_strategy_type' => ['nullable', 'string', Rule::in(self::STRATEGY_TYPES)],
             'fertilization_strategy_params' => ['nullable', 'array'],
         ]);
 
         if (!array_key_exists('is_active', $data)) {
             $data['is_active'] = true;
         }
+
+        $this->validateStrategyParams($request, 'irrigation');
+        $this->validateStrategyParams($request, 'fertilization');
 
         $zone = Zone::create($data);
         $zone->load(['parcel.farm']);
@@ -98,15 +112,18 @@ class ZoneController extends Controller
             'surface_ha' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
 
-            'irrigation_strategy_type' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'irrigation_strategy_type' => ['sometimes', 'nullable', 'string', Rule::in(self::STRATEGY_TYPES)],
             'irrigation_strategy_params' => ['sometimes', 'nullable', 'array'],
-            'fertilization_strategy_type' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'fertilization_strategy_type' => ['sometimes', 'nullable', 'string', Rule::in(self::STRATEGY_TYPES)],
             'fertilization_strategy_params' => ['sometimes', 'nullable', 'array'],
         ]);
 
         if (!array_key_exists('parcel_id', $data)) {
             $data['parcel_id'] = $zone->parcel_id;
         }
+
+        $this->validateStrategyParams($request, 'irrigation', $zone->irrigation_strategy_type);
+        $this->validateStrategyParams($request, 'fertilization', $zone->fertilization_strategy_type);
 
         $zone->update($data);
         $zone->refresh()->load(['parcel.farm']);
@@ -120,5 +137,63 @@ class ZoneController extends Controller
         $zone->delete();
 
         return response()->json(['message' => 'Zone deleted'], 204);
+    }
+
+    private function validateStrategyParams(Request $request, string $prefix, ?string $existingType = null): void
+    {
+        $typeKey = "{$prefix}_strategy_type";
+        $paramsKey = "{$prefix}_strategy_params";
+
+        $type = $request->input($typeKey, $existingType);
+        $params = $request->input($paramsKey);
+
+        if ($params === null) {
+            return;
+        }
+
+        if ($type === null) {
+            throw ValidationException::withMessages([
+                $typeKey => __('validation.required', ['attribute' => str_replace('_', ' ', $typeKey)]),
+            ]);
+        }
+
+        $rules = $this->strategyParamRules($type);
+
+        Validator::make($params, $rules, attributes: [
+            'inputs.soil_sensor_id' => __('inputs soil sensor'),
+            'inputs.et0_sensor_id' => __('inputs et0 sensor'),
+            'inputs.rain_sensor_id' => __('inputs rain sensor'),
+        ])->validate();
+    }
+
+    /**
+     * Define expected payload structure for irrigation and fertilization strategies.
+     */
+    private function strategyParamRules(string $type): array
+    {
+        return match ($type) {
+            'THRESHOLD' => [
+                'sensor_id' => ['required', 'integer', 'exists:sensors,id'],
+                'threshold_min' => ['required', 'numeric'],
+                'threshold_max' => ['required', 'numeric'],
+                'controller_id' => ['required', 'integer', 'exists:controllers,id'],
+            ],
+            'FUZZY' => [
+                'inputs' => ['required', 'array'],
+                'inputs.soil_sensor_id' => ['required', 'integer', 'exists:sensors,id'],
+                'inputs.et0_sensor_id' => ['nullable', 'integer', 'exists:sensors,id'],
+                'inputs.rain_sensor_id' => ['nullable', 'integer', 'exists:sensors,id'],
+                'rules' => ['nullable', 'array'],
+                'controller_id' => ['required', 'integer', 'exists:controllers,id'],
+            ],
+            'EVAPOTRANSPIRATION', 'ET' => [
+                'et_coefficient' => ['required', 'numeric'],
+                'trigger_deficit_mm' => ['required', 'numeric'],
+                'controller_id' => ['required', 'integer', 'exists:controllers,id'],
+            ],
+            default => [
+                'controller_id' => ['nullable', 'integer', 'exists:controllers,id'],
+            ],
+        };
     }
 }
