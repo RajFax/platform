@@ -77,7 +77,7 @@ class ControllerController extends BaseController
     public function update(Request $request, Controller $controller)
     {
         $data = $request->validate([
-            'zone_id'               => ['sometimes', 'nullable', 'exists:zones,id'],
+            'zone_id'               => ['sometimes', 'required_unless:level,FARM', 'nullable', 'exists:zones,id'],
             'name'                  => ['sometimes', 'required', 'string', 'max:255'],
             'type'                  => ['sometimes', 'required', 'string', 'max:255', Rule::in(self::CONTROLLER_TYPES)],
             'level'                 => ['sometimes', 'nullable', 'string', 'in:ZONE,FARM'],

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Zone;
+use App\Support\StrategyDefinition;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -83,9 +84,9 @@ class ZoneController extends Controller
             'surface_ha' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
 
-            'irrigation_strategy_type' => ['nullable', 'string', Rule::in(self::STRATEGY_TYPES)],
+            'irrigation_strategy_type' => ['nullable', 'string', Rule::in(StrategyDefinition::TYPES)],
             'irrigation_strategy_params' => ['nullable', 'array'],
-            'fertilization_strategy_type' => ['nullable', 'string', Rule::in(self::STRATEGY_TYPES)],
+            'fertilization_strategy_type' => ['nullable', 'string', Rule::in(StrategyDefinition::TYPES)],
             'fertilization_strategy_params' => ['nullable', 'array'],
         ]);
 
@@ -112,9 +113,9 @@ class ZoneController extends Controller
             'surface_ha' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
 
-            'irrigation_strategy_type' => ['sometimes', 'nullable', 'string', Rule::in(self::STRATEGY_TYPES)],
+            'irrigation_strategy_type' => ['sometimes', 'nullable', 'string', Rule::in(StrategyDefinition::TYPES)],
             'irrigation_strategy_params' => ['sometimes', 'nullable', 'array'],
-            'fertilization_strategy_type' => ['sometimes', 'nullable', 'string', Rule::in(self::STRATEGY_TYPES)],
+            'fertilization_strategy_type' => ['sometimes', 'nullable', 'string', Rule::in(StrategyDefinition::TYPES)],
             'fertilization_strategy_params' => ['sometimes', 'nullable', 'array'],
         ]);
 
@@ -157,7 +158,7 @@ class ZoneController extends Controller
             ]);
         }
 
-        $rules = $this->strategyParamRules($type);
+        $rules = StrategyDefinition::paramRules($type);
 
         Validator::make($params, $rules, attributes: [
             'inputs.soil_sensor_id' => __('inputs soil sensor'),
@@ -166,34 +167,4 @@ class ZoneController extends Controller
         ])->validate();
     }
 
-    /**
-     * Define expected payload structure for irrigation and fertilization strategies.
-     */
-    private function strategyParamRules(string $type): array
-    {
-        return match ($type) {
-            'THRESHOLD' => [
-                'sensor_id' => ['required', 'integer', 'exists:sensors,id'],
-                'threshold_min' => ['required', 'numeric'],
-                'threshold_max' => ['required', 'numeric'],
-                'controller_id' => ['required', 'integer', 'exists:controllers,id'],
-            ],
-            'FUZZY' => [
-                'inputs' => ['required', 'array'],
-                'inputs.soil_sensor_id' => ['required', 'integer', 'exists:sensors,id'],
-                'inputs.et0_sensor_id' => ['nullable', 'integer', 'exists:sensors,id'],
-                'inputs.rain_sensor_id' => ['nullable', 'integer', 'exists:sensors,id'],
-                'rules' => ['nullable', 'array'],
-                'controller_id' => ['required', 'integer', 'exists:controllers,id'],
-            ],
-            'EVAPOTRANSPIRATION', 'ET' => [
-                'et_coefficient' => ['required', 'numeric'],
-                'trigger_deficit_mm' => ['required', 'numeric'],
-                'controller_id' => ['required', 'integer', 'exists:controllers,id'],
-            ],
-            default => [
-                'controller_id' => ['nullable', 'integer', 'exists:controllers,id'],
-            ],
-        };
-    }
 }
