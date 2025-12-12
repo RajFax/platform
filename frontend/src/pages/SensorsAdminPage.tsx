@@ -1,5 +1,5 @@
 // src/pages/SensorsAdminPage.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -60,6 +60,13 @@ export function SensorsAdminPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showOnlyActive, setShowOnlyActive] = useState(false);
   const [idBeingDeleted, setIdBeingDeleted] = useState<number | null>(null);
+
+  // Préremplir l'unité à "mg/kg" si le type sélectionné est "npk"
+  useEffect(() => {
+    if (form.type === "npk") {
+      setForm((f) => ({ ...f, unit: "mg/kg" }));
+    }
+  }, [form.type]);
 
   const createMutation = useMutation({
     mutationFn: (payload: SensorPayload) => createSensor(payload),
@@ -175,9 +182,9 @@ export function SensorsAdminPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Capteurs</h1>
         <p className="text-sm text-slate-600 max-w-xl">
-          Gestion des capteurs de sol, d&apos;air, etc. Ces capteurs alimentent
-          les graphiques, les stratégies d&apos;irrigation et le système
-          d&apos;alertes.
+          Gestion des capteurs de sol, d'air, etc. Ces capteurs alimentent
+          les graphiques, les stratégies d'irrigation et le système
+          d'alertes.
         </p>
       </header>
 
