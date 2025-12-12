@@ -77,7 +77,7 @@ class ControllerController extends BaseController
     public function update(Request $request, Controller $controller)
     {
         $data = $request->validate([
-            'zone_id'               => ['sometimes', 'required_unless:level,FARM', 'nullable', 'exists:zones,id'],
+            'zone_id'               => ['sometimes', 'nullable', 'exists:zones,id'],
             'name'                  => ['sometimes', 'required', 'string', 'max:255'],
             'type'                  => ['sometimes', 'required', 'string', 'max:255', Rule::in(self::CONTROLLER_TYPES)],
             'level'                 => ['sometimes', 'nullable', 'string', 'in:ZONE,FARM'],
@@ -86,6 +86,18 @@ class ControllerController extends BaseController
             'last_communication_at' => ['sometimes', 'nullable', 'date'],
             'metadata'              => ['sometimes', 'nullable', 'array'],
         ]);
+
+        $level = $data['level'] ?? $controller->level ?? 'ZONE';
+        $zoneId = $data['zone_id'] ?? $controller->zone_id;
+
+        if ($level !== 'FARM' && ! $zoneId) {
+            return response()->json([
+                'message' => 'Zone is required for controllers with level other than FARM.',
+                'errors' => [
+                    'zone_id' => ['Zone is required for controllers with level other than FARM.'],
+                ],
+            ], 422);
+        }
 
         $controller->update($data);
         $controller->load(['zone.parcel.farm']);
