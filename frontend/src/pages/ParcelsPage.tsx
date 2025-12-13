@@ -1,5 +1,5 @@
 // src/pages/ParcelsPage.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useQuery,
   useMutation,
@@ -14,7 +14,11 @@ import {
   type ParcelCreatePayload,
   type ParcelUpdatePayload,
 } from "../api/parcels";
-import { fetchFarms, type FarmSummary } from "../api/farms";
+import {
+  fetchFarms,
+  type FarmBlockLight,
+  type FarmSummary,
+} from "../api/farms";
 import { Card } from "../components/ui/Card";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
@@ -300,6 +304,38 @@ export function ParcelsPage() {
     return <div>Erreur lors du chargement des parcelles.</div>;
   }
 
+  const parcelsByFarm = useMemo(() => {
+    const map = new Map<number, ParcelSummary[]>();
+    data.forEach((parcel) => {
+      if (!map.has(parcel.farm_id)) {
+        map.set(parcel.farm_id, []);
+      }
+      map.get(parcel.farm_id)?.push(parcel);
+    });
+    return map;
+  }, [data]);
+
+  const getBlocksForFarm = (farmId: number): FarmBlockLight[] => {
+    const farmBlocks = farms?.find((farm) => farm.id === farmId)?.blocks ?? [];
+    const farmParcels = parcelsByFarm.get(farmId) ?? [];
+
+    const missingBlocks = farmParcels.reduce<FarmBlockLight[]>((acc, parcel) => {
+      const alreadyKnown =
+        farmBlocks.some((b) => b.id === parcel.block_id) ||
+        acc.some((b) => b.id === parcel.block_id);
+      if (!alreadyKnown) {
+        acc.push({
+          id: parcel.block_id,
+          farm_id: farmId,
+          name: parcel.block?.name ?? `Bloc #${parcel.block_id}`,
+        });
+      }
+      return acc;
+    }, []);
+
+    return [...farmBlocks, ...missingBlocks];
+  };
+
   return (
     <div className="space-y-6">
       {/* HEADER */}
@@ -307,7 +343,7 @@ export function ParcelsPage() {
         <h1 className="text-2xl font-semibold text-slate-900">Parcelles</h1>
         <p className="text-sm text-slate-500 max-w-xl">
           Gestion des parcelles (exploitation, nom, surface, culture, consignes).
-          Cliquez sur une ligne pour accéder au détail.
+          Cliquez sur une parcelle pour accéder au détail.
         </p>
       </header>
 
@@ -316,7 +352,7 @@ export function ParcelsPage() {
         <Card>
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm font-semibold text-slate-800">
-              Liste des parcelles
+              Parcelles par exploitation
             </div>
             <Button
               variant="primary"
@@ -328,81 +364,116 @@ export function ParcelsPage() {
             </Button>
           </div>
 
-          {data.length === 0 ? (
-            <div className="text-xs text-slate-500">
-              Aucune parcelle pour le moment.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-700">
-                    <th className="text-left py-2 pr-2">Nom</th>
-                    <th className="text-left py-2 pr-2">Exploitation</th>
-                    <th className="text-left py-2 pr-2">Bloc</th>
-                    <th className="text-left py-2 pr-2">Surface (ha)</th>
-                    <th className="text-left py-2 pr-2">Culture</th>
-                    <th className="text-right py-2 pl-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((parcel) => (
-                    <tr
-                      key={parcel.id}
-                      className="border-b border-slate-200 hover:bg-slate-50 text-slate-800"
+          <div className="space-y-3">
+            {farms?.map((farm) => {
+              const farmParcels = parcelsByFarm.get(farm.id) ?? [];
+              const farmBlocks = getBlocksForFarm(farm.id);
+
+              return (
+                <Card key={farm.id} className="border border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800">{farm.name}</div>
+                      <div className="text-[11px] text-slate-600">
+                        {farm.location || "Emplacement non renseigné"}
+                      </div>
+                    </div>
+                    <Link
+                      to={`/farms/${farm.id}`}
+                      className="text-[11px] text-emerald-700 hover:underline"
                     >
-                      <td className="py-2 pr-2">
-                        <Link
-                          to={`/parcels/${parcel.id}`}
-                          className="text-emerald-700 hover:underline"
-                        >
-                          {parcel.name}
-                        </Link>
-                      </td>
-                      <td className="py-2 pr-2 text-slate-700">
-                        <Link
-                          to={`/farms/${parcel.farm_id}`}
-                          className="underline decoration-slate-300 hover:decoration-slate-500"
-                        >
-                          Farm #{parcel.farm_id}
-                        </Link>
-                      </td>
-                      <td className="py-2 pr-2 text-slate-700">
-                        {parcel.block?.name || "—"}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-700">
-                        {parcel.surface_ha ?? "—"}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-600">
-                        {parcel.culture_type}
-                      </td>
-                      <td className="py-2 pl-2 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            size="xs"
-                            variant="secondary"
-                            type="button"
-                            onClick={() => handleEditClick(parcel)}
+                      Voir l&apos;exploitation
+                    </Link>
+                  </div>
+
+                  {farmBlocks.length === 0 ? (
+                    <div className="text-xs text-slate-500">
+                      Aucun bloc associé pour l&apos;instant.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {farmBlocks.map((block) => {
+                        const blockParcels = farmParcels.filter(
+                          (parcel) => parcel.block_id === block.id
+                        );
+
+                        return (
+                          <div
+                            key={block.id}
+                            className="rounded border border-slate-200 bg-white p-3 shadow-sm"
                           >
-                            Éditer
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="danger"
-                            type="button"
-                            onClick={() => handleDelete(parcel.id)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            Supprimer
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-sm font-semibold text-slate-900">
+                                  {block.name}
+                                </div>
+                                <div className="text-[11px] text-slate-600">
+                                  {blockParcels.length} parcelle(s)
+                                </div>
+                              </div>
+                              {block.type && (
+                                <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700">
+                                  {block.type === "greenhouse" ? "Serre" : "Plein champ"}
+                                </span>
+                              )}
+                            </div>
+
+                            {blockParcels.length === 0 ? (
+                              <div className="mt-2 text-[11px] text-slate-500">
+                                Aucune parcelle dans ce bloc.
+                              </div>
+                            ) : (
+                              <ul className="mt-3 space-y-2">
+                                {blockParcels.map((parcel) => (
+                                  <li
+                                    key={parcel.id}
+                                    className="rounded border border-slate-100 bg-slate-50 p-2"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <Link
+                                          to={`/parcels/${parcel.id}`}
+                                          className="text-sm font-semibold text-emerald-700 hover:underline"
+                                        >
+                                          {parcel.name}
+                                        </Link>
+                                        <div className="text-[11px] text-slate-600">
+                                          Surface : {parcel.surface_ha ?? "—"} ha – {parcel.culture_type}
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-1">
+                                        <Button
+                                          size="xs"
+                                          variant="secondary"
+                                          type="button"
+                                          onClick={() => handleEditClick(parcel)}
+                                        >
+                                          Éditer
+                                        </Button>
+                                        <Button
+                                          size="xs"
+                                          variant="danger"
+                                          type="button"
+                                          onClick={() => handleDelete(parcel.id)}
+                                          disabled={deleteMutation.isPending}
+                                        >
+                                          Supprimer
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
         </Card>
 
         {/* FORMULAIRE CREATE / EDIT */}

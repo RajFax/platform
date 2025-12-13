@@ -1,5 +1,5 @@
 // src/pages/ZonesAdminPage.tsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useQuery,
   useMutation,
@@ -14,6 +14,7 @@ import {
   type ZonePayload,
 } from "../api/zones";
 import { fetchParcels, type ParcelSummary } from "../api/parcels";
+import { fetchFarms, type FarmBlockLight, type FarmSummary } from "../api/farms";
 import { Card } from "../components/ui/Card";
 
 export function ZonesAdminPage() {
@@ -27,6 +28,11 @@ export function ZonesAdminPage() {
   const { data: parcels } = useQuery<ParcelSummary[]>({
     queryKey: ["parcels", "for-zones"],
     queryFn: () => fetchParcels(),
+  });
+
+  const { data: farms } = useQuery<FarmSummary[]>({
+    queryKey: ["farms"],
+    queryFn: fetchFarms,
   });
 
   const [editingZone, setEditingZone] = useState<ZoneSummary | null>(null);
@@ -154,6 +160,50 @@ export function ZonesAdminPage() {
     ? data.filter((z) => z.is_active)
     : data;
 
+  const parcelsByFarm = useMemo(() => {
+    const map = new Map<number, ParcelSummary[]>();
+    parcels?.forEach((parcel) => {
+      if (!map.has(parcel.farm_id)) {
+        map.set(parcel.farm_id, []);
+      }
+      map.get(parcel.farm_id)?.push(parcel);
+    });
+    return map;
+  }, [parcels]);
+
+  const zonesByParcel = useMemo(() => {
+    const map = new Map<number, ZoneSummary[]>();
+    zones.forEach((zone) => {
+      if (!zone.parcel_id) return;
+      if (!map.has(zone.parcel_id)) {
+        map.set(zone.parcel_id, []);
+      }
+      map.get(zone.parcel_id)?.push(zone);
+    });
+    return map;
+  }, [zones]);
+
+  const getBlocksForFarm = (farmId: number): FarmBlockLight[] => {
+    const farmBlocks = farms?.find((farm) => farm.id === farmId)?.blocks ?? [];
+    const farmParcels = parcelsByFarm.get(farmId) ?? [];
+
+    const missingBlocks = farmParcels.reduce<FarmBlockLight[]>((acc, parcel) => {
+      const alreadyKnown =
+        farmBlocks.some((b) => b.id === parcel.block_id) ||
+        acc.some((b) => b.id === parcel.block_id);
+      if (!alreadyKnown) {
+        acc.push({
+          id: parcel.block_id,
+          farm_id: farmId,
+          name: parcel.block?.name ?? `Bloc #${parcel.block_id}`,
+        });
+      }
+      return acc;
+    }, []);
+
+    return [...farmBlocks, ...missingBlocks];
+  };
+
   return (
     <div className="space-y-6">
       {/* HEADER */}
@@ -170,7 +220,7 @@ export function ZonesAdminPage() {
         {/* LISTE ZONES */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-semibold">Liste des zones</div>
+            <div className="text-sm font-semibold">Zones par exploitation</div>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1 text-[11px] text-slate-600">
                 <input
@@ -191,71 +241,151 @@ export function ZonesAdminPage() {
             </div>
           </div>
 
-          {zones.length === 0 ? (
-            <div className="text-xs text-slate-500">
-              Aucune zone configurée.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-600">
-                    <th className="text-left py-2 pr-2">Nom</th>
-                    <th className="text-left py-2 pr-2">Parcelle</th>
-                    <th className="text-left py-2 pr-2">Surface (ha)</th>
-                    <th className="text-left py-2 pr-2">Statut</th>
-                    <th className="text-right py-2 pl-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {zones.map((z) => (
-                    <tr
-                      key={z.id}
-                      className="border-b border-slate-200 hover:bg-white"
-                    >
-                      <td className="py-2 pr-2 text-slate-800">
-                        {z.name}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-600">
-                        {z.parcel?.name ?? "—"}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-700">
-                        {z.surface_ha ?? "—"}
-                      </td>
-                      <td className="py-2 pr-2">
-                        {z.is_active ? (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-700/40">
-                            Active
-                          </span>
-                        ) : (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-700/20 text-slate-700 border border-slate-200">
-                            Inactive
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2 pl-2 text-right space-x-2">
-                        <button
-                          type="button"
-                          className="text-xs px-2 py-1 rounded border border-slate-200 hover:bg-slate-800"
-                          onClick={() => handleEdit(z)}
-                        >
-                          Éditer
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs px-2 py-1 rounded border border-red-700 text-red-300 hover:bg-red-900/40"
-                          onClick={() => handleDelete(z.id)}
-                          disabled={deleteMutation.isPending && idBeingDeleted === z.id}
-                        >
-                          Supprimer
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="space-y-3">
+            {farms?.map((farm) => {
+              const farmBlocks = getBlocksForFarm(farm.id);
+              const farmParcels = parcelsByFarm.get(farm.id) ?? [];
+
+              return (
+                <Card key={farm.id} className="border border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800">{farm.name}</div>
+                      <div className="text-[11px] text-slate-600">
+                        {farm.location || "Emplacement non renseigné"}
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-slate-500">
+                      {farmBlocks.length} bloc(s)
+                    </span>
+                  </div>
+
+                  {farmBlocks.length === 0 ? (
+                    <div className="text-xs text-slate-500">Aucun bloc associé.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {farmBlocks.map((block) => {
+                        const blockParcels = farmParcels.filter(
+                          (parcel) => parcel.block_id === block.id
+                        );
+
+                        return (
+                          <div
+                            key={block.id}
+                            className="rounded border border-slate-200 bg-white p-3 shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-sm font-semibold text-slate-900">
+                                  {block.name}
+                                </div>
+                                <div className="text-[11px] text-slate-600">
+                                  {blockParcels.length} parcelle(s)
+                                </div>
+                              </div>
+                              {block.type && (
+                                <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700">
+                                  {block.type === "greenhouse" ? "Serre" : "Plein champ"}
+                                </span>
+                              )}
+                            </div>
+
+                            {blockParcels.length === 0 ? (
+                              <div className="mt-2 text-[11px] text-slate-500">
+                                Aucune parcelle dans ce bloc.
+                              </div>
+                            ) : (
+                              <div className="mt-3 space-y-2">
+                                {blockParcels.map((parcel) => {
+                                  const parcelZones = zonesByParcel.get(parcel.id) ?? [];
+
+                                  return (
+                                    <Card
+                                      key={parcel.id}
+                                      className="border border-slate-100 bg-slate-50"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <div className="text-sm font-semibold text-emerald-700">
+                                            {parcel.name}
+                                          </div>
+                                          <div className="text-[11px] text-slate-600">
+                                            {parcelZones.length} zone(s)
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {parcelZones.length === 0 ? (
+                                        <div className="mt-2 text-[11px] text-slate-500">
+                                          Aucune zone définie pour cette parcelle.
+                                        </div>
+                                      ) : (
+                                        <ul className="mt-3 space-y-2">
+                                          {parcelZones.map((zone) => (
+                                            <li
+                                              key={zone.id}
+                                              className="rounded border border-slate-200 bg-white p-2"
+                                            >
+                                              <div className="flex items-center justify-between">
+                                                <div>
+                                                  <div className="text-sm font-semibold text-slate-900">
+                                                    {zone.name}
+                                                  </div>
+                                                  <div className="text-[11px] text-slate-600">
+                                                    Surface : {zone.surface_ha ?? "—"} ha
+                                                  </div>
+                                                  <div className="text-[11px] text-slate-600">
+                                                    Statut : {" "}
+                                                    <span
+                                                      className={`px-2 py-[2px] rounded-full text-[11px] font-semibold ${
+                                                        zone.is_active
+                                                          ? "bg-emerald-100 text-emerald-700"
+                                                          : "bg-slate-100 text-slate-600"
+                                                      }`}
+                                                    >
+                                                      {zone.is_active ? "Active" : "Inactive"}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                  <button
+                                                    type="button"
+                                                    className="text-xs px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                                    onClick={() => handleEdit(zone)}
+                                                  >
+                                                    Éditer
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    className="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-700"
+                                                    onClick={() => handleDelete(zone.id)}
+                                                    disabled={
+                                                      deleteMutation.isPending &&
+                                                      idBeingDeleted === zone.id
+                                                    }
+                                                  >
+                                                    Supprimer
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </Card>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
         </Card>
 
         {/* FORMULAIRE CREATE / EDIT */}
