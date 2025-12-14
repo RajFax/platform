@@ -122,6 +122,28 @@ export function BlocksPage() {
     deleteMutation.mutate(id);
   }
 
+  const resolvedBlocks = blocks ?? [];
+  const resolvedFarms = farms ?? [];
+
+  const blocksByFarm = useMemo(() => {
+    const map = new Map<number, BlockDTO[]>();
+    resolvedBlocks.forEach((block) => {
+      if (!map.has(block.farm_id)) {
+        map.set(block.farm_id, []);
+      }
+      map.get(block.farm_id)?.push(block);
+    });
+    return map;
+  }, [resolvedBlocks]);
+
+  const orphanBlocks = useMemo(
+    () =>
+      resolvedBlocks.filter(
+        (block) => !resolvedFarms.some((farm) => farm.id === block.farm_id)
+      ),
+    [resolvedBlocks, resolvedFarms]
+  );
+
   if (isLoading) return <div>Chargement des blocs…</div>;
   if (isError || !blocks) return <div>Erreur lors du chargement des blocs.</div>;
 
