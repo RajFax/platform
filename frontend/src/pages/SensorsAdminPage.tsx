@@ -1,5 +1,5 @@
 // src/pages/SensorsAdminPage.tsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useQuery,
   useMutation,
@@ -14,6 +14,7 @@ import {
   type SensorPayload,
 } from "../api/sensors";
 import { fetchZones, type ZoneSummary } from "../api/zones";
+import { fetchParcels, type ParcelSummary } from "../api/parcels";
 import { Card } from "../components/ui/Card";
 
 const SENSOR_TYPE_OPTIONS: { value: string; label: string }[] = [
@@ -71,6 +72,11 @@ export function SensorsAdminPage() {
   const { data: zones } = useQuery<ZoneSummary[]>({
     queryKey: ["zones", "for-sensors"],
     queryFn: () => fetchZones(),
+  });
+
+  const { data: parcels } = useQuery<ParcelSummary[]>({
+    queryKey: ["parcels", "for-sensors"],
+    queryFn: () => fetchParcels(),
   });
 
   const [editingSensor, setEditingSensor] = useState<SensorSummary | null>(null);
@@ -199,12 +205,75 @@ export function SensorsAdminPage() {
     }
   }
 
+  const sensors = useMemo(() => {
+    const allSensors = data ?? [];
+    return showOnlyActive
+      ? allSensors.filter((s) => s.is_active)
+      : allSensors;
+  }, [data, showOnlyActive]);
+
+  const parcelById = useMemo(() => {
+    const map = new Map<number, ParcelSummary>();
+    parcels?.forEach((parcel) => map.set(parcel.id, parcel));
+    return map;
+  }, [parcels]);
+
+  const zoneById = useMemo(() => {
+    const map = new Map<number, ZoneSummary>();
+    zones?.forEach((zone) => map.set(zone.id, zone));
+    return map;
+  }, [zones]);
+
+  const sensorsByZone = useMemo(() => {
+    const map = new Map<number | "none", SensorSummary[]>();
+
+    sensors.forEach((sensor) => {
+      const key = sensor.zone_id ?? "none";
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(sensor);
+    });
+
+    return Array.from(map.entries())
+      .map(([key, sensorsInZone]) => {
+        const zoneId = key === "none" ? null : key;
+        const zone = zoneId ? zoneById.get(zoneId) : undefined;
+        const parcel =
+          zone && zone.parcel_id ? parcelById.get(zone.parcel_id) : undefined;
+
+        return {
+          zoneId,
+          zone,
+          parcel,
+          sensors: sensorsInZone,
+        };
+      })
+      .sort((a, b) => {
+        const nameA = a.zone?.name ?? "Sans zone";
+        const nameB = b.zone?.name ?? "Sans zone";
+        return nameA.localeCompare(nameB);
+      });
+  }, [parcelById, sensors, zoneById]);
+
+  function formatZonePath(
+    zone?: ZoneSummary,
+    parcel?: ParcelSummary
+  ): string {
+    const farmName = zone?.farm?.name ?? "Exploitation inconnue";
+    const blockName = parcel?.block?.name
+      ? `Bloc ${parcel.block.name}`
+      : parcel?.block_id
+      ? `Bloc #${parcel.block_id}`
+      : "Bloc ?";
+    const parcelName = zone?.parcel?.name ?? parcel?.name ?? "Parcelle ?";
+    const zoneName = zone?.name ?? "Zone ?";
+
+    return `${farmName} · ${blockName} · ${parcelName} · ${zoneName}`;
+  }
+
   if (isLoading) return <div>Chargement des capteurs…</div>;
   if (isError || !data) return <div>Erreur de chargement des capteurs.</div>;
-
-  const sensors = showOnlyActive
-    ? data.filter((s) => s.is_active)
-    : data;
 
   return (
     <div className="space-y-6">
@@ -222,7 +291,7 @@ export function SensorsAdminPage() {
         {/* LISTE CAPTEURS */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-semibold">Liste des capteurs</div>
+            <div className="text-sm font-semibold">Capteurs par zone</div>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1 text-[11px] text-slate-600">
                 <input
@@ -248,76 +317,90 @@ export function SensorsAdminPage() {
               Aucun capteur configuré.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-600">
-                    <th className="text-left py-2 pr-2">Nom</th>
-                    <th className="text-left py-2 pr-2">Type</th>
-                    <th className="text-left py-2 pr-2">Unité</th>
-                    <th className="text-left py-2 pr-2">Zone</th>
-                    <th className="text-left py-2 pr-2">Matériel</th>
-                    <th className="text-left py-2 pr-2">Statut</th>
-                    <th className="text-right py-2 pl-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sensors.map((s) => (
-                    <tr
-                      key={s.id}
-                      className="border-b border-slate-200 hover:bg-white"
-                    >
-                      <td className="py-2 pr-2 text-slate-800">
-                        {s.name}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-700">
-                        {formatSensorType(s.type)}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-700">
-                        {s.unit || "—"}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-600">
-                        {s.zone?.name ?? "—"}
-                        {s.parcel?.name ? ` · ${s.parcel.name}` : ""}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-600">
-                        {s.hardware_id || "—"}
-                      </td>
-                      <td className="py-2 pr-2">
-                        {s.is_active ? (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-700/40">
-                            Actif
-                          </span>
-                        ) : (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-700/20 text-slate-700 border border-slate-200">
-                            Inactif
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2 pl-2 text-right space-x-2">
-                        <button
-                          type="button"
-                          className="text-xs px-2 py-1 rounded border border-slate-200 hover:bg-slate-800"
-                          onClick={() => handleEdit(s)}
-                        >
-                          Éditer
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs px-2 py-1 rounded border border-red-700 text-red-300 hover:bg-red-900/40"
-                          onClick={() => handleDelete(s.id)}
-                          disabled={
-                            deleteMutation.isPending &&
-                            idBeingDeleted === s.id
-                          }
-                        >
-                          Supprimer
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {sensorsByZone.map((group) => (
+                <div
+                  key={group.zoneId ?? "no-zone"}
+                  className="rounded border border-slate-200 bg-white p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">
+                        {group.zone?.name ?? "Zone non renseignée"}
+                      </div>
+                      <div className="text-[11px] text-slate-600">
+                        {group.zone
+                          ? formatZonePath(group.zone, group.parcel)
+                          : "Aucune zone associée"}
+                      </div>
+                    </div>
+                    {group.zone && (
+                      <span
+                        className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                          group.zone.is_active
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                            : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}
+                      >
+                        {group.zone.is_active ? "Active" : "Inactive"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {group.sensors.map((s) => (
+                      <div
+                        key={s.id}
+                        className="rounded border border-slate-100 bg-slate-50 p-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-semibold text-slate-900">
+                              {s.name}
+                            </div>
+                            <div className="text-[11px] text-slate-600">
+                              {formatSensorType(s.type)}
+                              {s.unit ? ` (${s.unit})` : ""}
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                              <span>
+                                Matériel : {s.hardware_id?.trim() || "—"}
+                              </span>
+                              <span className="text-slate-400">•</span>
+                              {s.is_active ? (
+                                <span className="text-emerald-600">Actif</span>
+                              ) : (
+                                <span className="text-slate-500">Inactif</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="text-[11px] px-2 py-1 rounded border border-slate-200 hover:bg-slate-800"
+                              onClick={() => handleEdit(s)}
+                            >
+                              Éditer
+                            </button>
+                            <button
+                              type="button"
+                              className="text-[11px] px-2 py-1 rounded border border-red-700 text-red-300 hover:bg-red-900/40"
+                              onClick={() => handleDelete(s.id)}
+                              disabled={
+                                deleteMutation.isPending &&
+                                idBeingDeleted === s.id
+                              }
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </Card>
