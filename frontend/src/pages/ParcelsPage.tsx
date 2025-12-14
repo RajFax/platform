@@ -299,21 +299,18 @@ export function ParcelsPage() {
     deleteMutation.mutate(id);
   }
 
-  if (isLoading) return <div>Chargement des parcelles…</div>;
-  if (isError || !data) {
-    return <div>Erreur lors du chargement des parcelles.</div>;
-  }
+  const parcels = data ?? [];
 
   const parcelsByFarm = useMemo(() => {
     const map = new Map<number, ParcelSummary[]>();
-    data.forEach((parcel) => {
+    parcels.forEach((parcel) => {
       if (!map.has(parcel.farm_id)) {
         map.set(parcel.farm_id, []);
       }
       map.get(parcel.farm_id)?.push(parcel);
     });
     return map;
-  }, [data]);
+  }, [parcels]);
 
   const getBlocksForFarm = (farmId: number): FarmBlockLight[] => {
     const farmBlocks = farms?.find((farm) => farm.id === farmId)?.blocks ?? [];
@@ -335,6 +332,11 @@ export function ParcelsPage() {
 
     return [...farmBlocks, ...missingBlocks];
   };
+
+  if (isLoading) return <div>Chargement des parcelles…</div>;
+  if (isError || !data) {
+    return <div>Erreur lors du chargement des parcelles.</div>;
+  }
 
   return (
     <div className="space-y-6">

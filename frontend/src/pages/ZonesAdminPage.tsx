@@ -153,12 +153,12 @@ export function ZonesAdminPage() {
     }
   }
 
-  if (isLoading) return <div>Chargement des zones…</div>;
-  if (isError || !data) return <div>Erreur de chargement des zones.</div>;
+  const zonesData = data ?? [];
 
-  const zones = filterActiveOnly
-    ? data.filter((z) => z.is_active)
-    : data;
+  const zones = useMemo(
+    () => (filterActiveOnly ? zonesData.filter((z) => z.is_active) : zonesData),
+    [filterActiveOnly, zonesData]
+  );
 
   const parcelsByFarm = useMemo(() => {
     const map = new Map<number, ParcelSummary[]>();
@@ -203,6 +203,9 @@ export function ZonesAdminPage() {
 
     return [...farmBlocks, ...missingBlocks];
   };
+
+  if (isLoading) return <div>Chargement des zones…</div>;
+  if (isError || !data) return <div>Erreur de chargement des zones.</div>;
 
   return (
     <div className="space-y-6">
