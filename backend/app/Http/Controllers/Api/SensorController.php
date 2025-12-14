@@ -15,6 +15,7 @@ class SensorController extends Controller
         'humidity_air',
         'ec_soil',
         'ph_soil',
+        'npk',
         'co2',
         'light',
         'pressure',
