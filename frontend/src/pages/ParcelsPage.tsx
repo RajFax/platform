@@ -338,11 +338,6 @@ export function ParcelsPage() {
     return <div>Erreur lors du chargement des parcelles.</div>;
   }
 
-  if (isLoading) return <div>Chargement des parcelles…</div>;
-  if (isError || !data) {
-    return <div>Erreur lors du chargement des parcelles.</div>;
-  }
-
   return (
     <div className="space-y-6">
       {/* HEADER */}
