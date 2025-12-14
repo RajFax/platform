@@ -147,6 +147,21 @@ export function BlocksPage() {
   if (isLoading) return <div>Chargement des blocs…</div>;
   if (isError || !blocks) return <div>Erreur lors du chargement des blocs.</div>;
 
+  const blocksByFarm = useMemo(() => {
+    const map = new Map<number, BlockDTO[]>();
+    blocks.forEach((block) => {
+      if (!map.has(block.farm_id)) {
+        map.set(block.farm_id, []);
+      }
+      map.get(block.farm_id)?.push(block);
+    });
+    return map;
+  }, [blocks]);
+
+  const orphanBlocks = blocks.filter(
+    (block) => !farms?.some((farm) => farm.id === block.farm_id)
+  );
+
   return (
     <div className="space-y-6">
       <header className="space-y-1">
