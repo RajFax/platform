@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -125,6 +125,21 @@ export function BlocksPage() {
   if (isLoading) return <div>Chargement des blocs…</div>;
   if (isError || !blocks) return <div>Erreur lors du chargement des blocs.</div>;
 
+  const blocksByFarm = useMemo(() => {
+    const map = new Map<number, BlockDTO[]>();
+    blocks.forEach((block) => {
+      if (!map.has(block.farm_id)) {
+        map.set(block.farm_id, []);
+      }
+      map.get(block.farm_id)?.push(block);
+    });
+    return map;
+  }, [blocks]);
+
+  const orphanBlocks = blocks.filter(
+    (block) => !farms?.some((farm) => farm.id === block.farm_id)
+  );
+
   return (
     <div className="space-y-6">
       <header className="space-y-1">
@@ -140,79 +155,132 @@ export function BlocksPage() {
         <Card>
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm font-semibold text-slate-800">
-              Liste des blocs
+              Blocs par exploitation
             </div>
             <Button size="xs" variant="primary" type="button" onClick={resetForm}>
               + Nouveau bloc
             </Button>
           </div>
 
-          {blocks.length === 0 ? (
-            <div className="text-xs text-slate-500">Aucun bloc enregistré.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-700">
-                    <th className="text-left py-2 pr-2">Nom</th>
-                    <th className="text-left py-2 pr-2">Type</th>
-                    <th className="text-left py-2 pr-2">Exploitation</th>
-                    <th className="text-left py-2 pr-2">Parcelles</th>
-                    <th className="text-right py-2 pl-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {blocks.map((block) => (
-                    <tr
-                      key={block.id}
-                      className="border-b border-slate-200 hover:bg-slate-50 text-slate-800"
+          <div className="space-y-3">
+            {farms?.map((farm) => {
+              const farmBlocks = blocksByFarm.get(farm.id) ?? [];
+
+              return (
+                <Card key={farm.id} className="border border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800">
+                        {farm.name}
+                      </div>
+                      <div className="text-[11px] text-slate-600">
+                        {farm.location || "Emplacement non renseigné"}
+                      </div>
+                    </div>
+                    <Link
+                      to={`/farms/${farm.id}`}
+                      className="text-[11px] text-emerald-700 hover:underline"
                     >
-                      <td className="py-2 pr-2">{block.name}</td>
-                      <td className="py-2 pr-2 text-slate-700">
-                        {block.type === "greenhouse" ? "Serre" : "Plein champ"}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-700">
-                        {farms?.find((f) => f.id === block.farm_id) ? (
-                          <Link
-                            to={`/farms/${block.farm_id}`}
-                            className="text-emerald-700 hover:underline"
-                          >
-                            {farms.find((f) => f.id === block.farm_id)?.name}
-                          </Link>
-                        ) : (
-                          `Farm #${block.farm_id}`
-                        )}
-                      </td>
-                      <td className="py-2 pr-2 text-slate-600">
-                        {block.parcels_count ?? "—"}
-                      </td>
-                      <td className="py-2 pl-2 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            size="xs"
-                            variant="secondary"
-                            type="button"
-                            onClick={() => handleEdit(block)}
-                          >
-                            Éditer
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="danger"
-                            type="button"
-                            onClick={() => handleDelete(block.id)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            Supprimer
-                          </Button>
+                      Voir l&apos;exploitation
+                    </Link>
+                  </div>
+
+                  {farmBlocks.length === 0 ? (
+                    <div className="text-xs text-slate-500">
+                      Aucun bloc pour cette exploitation.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {farmBlocks.map((block) => (
+                        <div
+                          key={block.id}
+                          className="rounded border border-slate-200 bg-white p-3 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-semibold text-slate-900">
+                                {block.name}
+                              </div>
+                              <div className="text-[11px] text-slate-600">
+                                Parcelles : {block.parcels_count ?? "—"}
+                              </div>
+                            </div>
+                            <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700">
+                              {block.type === "greenhouse" ? "Serre" : "Plein champ"}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex justify-end gap-2">
+                            <Button
+                              size="xs"
+                              variant="secondary"
+                              type="button"
+                              onClick={() => handleEdit(block)}
+                            >
+                              Éditer
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="danger"
+                              type="button"
+                              onClick={() => handleDelete(block.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              Supprimer
+                            </Button>
+                          </div>
                         </div>
-                      </td>
-                    </tr>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+
+            {orphanBlocks.length > 0 && (
+              <Card className="border border-amber-200 bg-amber-50">
+                <div className="text-sm font-semibold text-amber-800 mb-2">
+                  Blocs sans exploitation connue
+                </div>
+                <div className="space-y-2">
+                  {orphanBlocks.map((block) => (
+                    <div
+                      key={block.id}
+                      className="rounded border border-amber-200 bg-white p-3 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold text-slate-900">
+                          {block.name}
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700">
+                          {block.type === "greenhouse" ? "Serre" : "Plein champ"}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex justify-end gap-2">
+                        <Button
+                          size="xs"
+                          variant="secondary"
+                          type="button"
+                          onClick={() => handleEdit(block)}
+                        >
+                          Éditer
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="danger"
+                          type="button"
+                          onClick={() => handleDelete(block.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          Supprimer
+                        </Button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </div>
+              </Card>
+            )}
+          </div>
         </Card>
 
         <Card>
