@@ -30,6 +30,19 @@ const SENSOR_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "rainfall", label: "Pluviométrie" },
 ];
 
+const SENSOR_TYPE_ICONS: Record<string, { symbol: string; bg: string }> = {
+  soil_moisture: { symbol: "💧", bg: "bg-emerald-50 text-emerald-700" },
+  temperature_air: { symbol: "🌡️", bg: "bg-amber-50 text-amber-700" },
+  humidity_air: { symbol: "💦", bg: "bg-blue-50 text-blue-700" },
+  ec_soil: { symbol: "🧪", bg: "bg-purple-50 text-purple-700" },
+  ph_soil: { symbol: "⚗️", bg: "bg-indigo-50 text-indigo-700" },
+  npk: { symbol: "🧬", bg: "bg-sky-50 text-sky-700" },
+  co2: { symbol: "🌿", bg: "bg-lime-50 text-lime-700" },
+  light: { symbol: "☀️", bg: "bg-orange-50 text-orange-700" },
+  pressure: { symbol: "📈", bg: "bg-slate-50 text-slate-700" },
+  rainfall: { symbol: "🌧️", bg: "bg-cyan-50 text-cyan-700" },
+};
+
 const SENSOR_UNIT_OPTIONS = ["%", "°C", "dS/m", "pH", "ppm", "lux", "hPa", "mm"];
 
 const SENSOR_DEFAULT_UNIT: Record<string, string> = {
@@ -59,6 +72,21 @@ function formatSensorType(type?: string | null) {
 
   const match = SENSOR_TYPE_OPTIONS.find((option) => option.value === type);
   return match?.label ?? type;
+}
+
+function SensorIconBadge({ type }: { type?: string | null }) {
+  const icon = type ? SENSOR_TYPE_ICONS[type] : undefined;
+
+  return (
+    <span
+      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold shadow-inner ${
+        icon ? icon.bg : "bg-slate-100 text-slate-600"
+      }`}
+      aria-hidden
+    >
+      {icon?.symbol ?? "📟"}
+    </span>
+  );
 }
 
 export function SensorsAdminPage() {
@@ -278,20 +306,44 @@ export function SensorsAdminPage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Capteurs</h1>
-        <p className="text-sm text-slate-600 max-w-xl">
-          Gestion des capteurs de sol, d&apos;air, etc. Ces capteurs alimentent
-          les graphiques, les stratégies d&apos;irrigation et le système
-          d&apos;alertes.
-        </p>
+      <header className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl">
+            🌱
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">Capteurs</h1>
+            <p className="text-sm text-slate-600 max-w-xl">
+              Gestion visuelle des capteurs de sol, d&apos;air et de climat pour
+              alimenter graphiques, alertes et automatisations.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+          <span className="flex items-center gap-2 font-semibold">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-inner">
+              📡
+            </span>
+            Vue synthétique
+          </span>
+          <span className="text-emerald-900/80">
+            Statut actif et type représentés par des icônes pour limiter le
+            texte redondant.
+          </span>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-[2fr,1.3fr] gap-4">
         {/* LISTE CAPTEURS */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-semibold">Capteurs par zone</div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-base">
+                🛰️
+              </span>
+              Capteurs par zone
+            </div>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1 text-[11px] text-slate-600">
                 <input
@@ -323,25 +375,33 @@ export function SensorsAdminPage() {
                   key={group.zoneId ?? "no-zone"}
                   className="rounded border border-slate-200 bg-white p-3"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-sm font-semibold text-slate-900">
-                        {group.zone?.name ?? "Zone non renseignée"}
-                      </div>
-                      <div className="text-[11px] text-slate-600">
-                        {group.zone
-                          ? formatZonePath(group.zone, group.parcel)
-                          : "Aucune zone associée"}
+                  <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm">
+                        📍
+                      </span>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          {group.zone?.name ?? "Zone non renseignée"}
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          {group.zone
+                            ? formatZonePath(group.zone, group.parcel)
+                            : "Aucune zone associée"}
+                        </div>
                       </div>
                     </div>
                     {group.zone && (
                       <span
-                        className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                        className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${
                           group.zone.is_active
                             ? "bg-emerald-50 text-emerald-700 border-emerald-100"
                             : "bg-slate-50 text-slate-600 border-slate-200"
                         }`}
                       >
+                        <span className="text-[10px]" aria-hidden>
+                          {group.zone.is_active ? "✔" : "⏸"}
+                        </span>
                         {group.zone.is_active ? "Active" : "Inactive"}
                       </span>
                     )}
@@ -351,27 +411,38 @@ export function SensorsAdminPage() {
                     {group.sensors.map((s) => (
                       <div
                         key={s.id}
-                        className="rounded border border-slate-100 bg-slate-50 p-2"
+                        className="rounded border border-slate-100 bg-gradient-to-r from-slate-50 to-white p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="text-xs font-semibold text-slate-900">
-                              {s.name}
-                            </div>
-                            <div className="text-[11px] text-slate-600">
-                              {formatSensorType(s.type)}
-                              {s.unit ? ` (${s.unit})` : ""}
-                            </div>
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
-                              <span>
-                                Matériel : {s.hardware_id?.trim() || "—"}
-                              </span>
-                              <span className="text-slate-400">•</span>
-                              {s.is_active ? (
-                                <span className="text-emerald-600">Actif</span>
-                              ) : (
-                                <span className="text-slate-500">Inactif</span>
-                              )}
+                          <div className="flex items-start gap-2">
+                            <SensorIconBadge type={s.type} />
+                            <div>
+                              <div className="text-xs font-semibold text-slate-900 flex items-center gap-2">
+                                {s.name}
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                                  {formatSensorType(s.type)}
+                                </span>
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                                {s.unit && (
+                                  <span className="rounded-full bg-white px-2 py-0.5 shadow-sm">
+                                    {s.unit}
+                                  </span>
+                                )}
+                                <span className="rounded-full bg-white px-2 py-0.5 shadow-sm">
+                                  {s.hardware_id?.trim() || "ID non renseigné"}
+                                </span>
+                                <span
+                                  className={`flex items-center gap-1 rounded-full px-2 py-0.5 shadow-sm ${
+                                    s.is_active
+                                      ? "bg-emerald-50 text-emerald-700"
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}
+                                >
+                                  <span aria-hidden>{s.is_active ? "●" : "○"}</span>
+                                  {s.is_active ? "Actif" : "Inactif"}
+                                </span>
+                              </div>
                             </div>
                           </div>
 
