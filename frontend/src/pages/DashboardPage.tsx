@@ -5,7 +5,8 @@ import { Card } from "../components/ui/Card";
 import { fetchZones, ZoneSummary } from "../api/zones";
 import { fetchSensors, SensorSummary } from "../api/sensors";
 import { fetchControllers, ControllerItem } from "../api/controllers";
-import { fetchAlerts, AlertItem } from "../api/alerts";
+import { fetchAlerts } from "../api/alerts";
+import type { AlertItem } from "../api/alerts";
 import { useMemo } from "react";
 
 interface FarmApi {
