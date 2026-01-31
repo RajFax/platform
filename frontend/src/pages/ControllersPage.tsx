@@ -20,6 +20,8 @@ import { ActuatorIcon } from "../components/ui/Icons";
 
 export function ControllersPage() {
   const queryClient = useQueryClient();
+  const controllerTypeOptions = ["VALVE", "PUMP", "FERTIGATION"];
+  const controllerModeOptions = ["MANUAL", "AUTO", "FUZZY"];
 
   const { data, isLoading, isError } = useQuery<ControllerItem[]>({
     queryKey: ["controllers"],
@@ -235,11 +237,22 @@ export function ControllersPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-600 mb-1">Type *</label>
-                <input
+                <select
                   className="w-full"
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
-                />
+                >
+                  <option value="" disabled>
+                    Sélectionner un type
+                  </option>
+                  {[form.type, ...controllerTypeOptions]
+                    .filter((value, index, self) => value && self.indexOf(value) === index)
+                    .map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                </select>
               </div>
               <div>
                 <label className="block text-slate-600 mb-1">Niveau</label>
@@ -259,8 +272,16 @@ export function ControllersPage() {
                   value={form.mode}
                   onChange={(e) => setForm({ ...form, mode: e.target.value })}
                 >
-                  <option value="AUTO">AUTO</option>
-                  <option value="MANUAL">MANUAL</option>
+                  <option value="" disabled>
+                    Sélectionner un mode
+                  </option>
+                  {[form.mode, ...controllerModeOptions]
+                    .filter((value, index, self) => value && self.indexOf(value) === index)
+                    .map((mode) => (
+                      <option key={mode} value={mode}>
+                        {mode === "MANUAL" ? "MANUEL" : mode}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>
