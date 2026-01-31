@@ -2,10 +2,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Card } from "../components/ui/Card";
-import { fetchZones, ZoneSummary } from "../api/zones";
-import { fetchSensors, SensorSummary } from "../api/sensors";
-import { fetchControllers, ControllerItem } from "../api/controllers";
-import { fetchAlerts, AlertItem } from "../api/alerts";
+import { fetchZones } from "../api/zones";
+import type { ZoneSummary } from "../api/zones";
+import { fetchSensors } from "../api/sensors";
+import type { SensorSummary } from "../api/sensors";
+import { fetchControllers } from "../api/controllers";
+import type { ControllerItem } from "../api/controllers";
+import { fetchAlerts } from "../api/alerts";
+import type { AlertItem } from "../api/alerts";
 import { useMemo } from "react";
 
 interface FarmApi {
