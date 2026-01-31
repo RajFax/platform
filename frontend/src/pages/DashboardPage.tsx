@@ -311,6 +311,54 @@ export function DashboardPage() {
     return result;
   }, [measurementQueries, selectedSensors]);
 
+  const sensorsByZone = useMemo(() => {
+    if (!selectedSensors) return {} as Record<number, SensorSummary[]>;
+    return selectedSensors.reduce((acc, sensor) => {
+      if (sensor.zone_id == null) return acc;
+      if (!acc[sensor.zone_id]) acc[sensor.zone_id] = [];
+      acc[sensor.zone_id].push(sensor);
+      return acc;
+    }, {} as Record<number, SensorSummary[]>);
+  }, [selectedSensors]);
+
+  const measurementsBySensor = useMemo(() => {
+    if (!selectedSensors || measurementQueries.length === 0) {
+      return {} as Record<number, MeasurementDTO[]>;
+    }
+    const result: Record<number, MeasurementDTO[]> = {};
+    selectedSensors.forEach((sensor, index) => {
+      const query = measurementQueries[index];
+      if (query?.data) {
+        result[sensor.id] = query.data;
+      }
+    });
+    return result;
+  }, [measurementQueries, selectedSensors]);
+
+  const sensorsByZone = useMemo(() => {
+    if (!sensorsData) return {} as Record<number, SensorSummary[]>;
+    return sensorsData.reduce((acc, sensor) => {
+      if (sensor.zone_id == null) return acc;
+      if (!acc[sensor.zone_id]) acc[sensor.zone_id] = [];
+      acc[sensor.zone_id].push(sensor);
+      return acc;
+    }, {} as Record<number, SensorSummary[]>);
+  }, [sensorsData]);
+
+  const measurementsBySensor = useMemo(() => {
+    if (!sensorsData || measurementQueries.length === 0) {
+      return {} as Record<number, MeasurementDTO[]>;
+    }
+    const result: Record<number, MeasurementDTO[]> = {};
+    sensorsData.forEach((sensor, index) => {
+      const query = measurementQueries[index];
+      if (query?.data) {
+        result[sensor.id] = query.data;
+      }
+    });
+    return result;
+  }, [measurementQueries, sensorsData]);
+
   // Gestion des états de chargement/erreur
   if (
     isLoading ||
