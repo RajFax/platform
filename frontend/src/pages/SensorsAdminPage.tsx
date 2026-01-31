@@ -15,6 +15,7 @@ import {
 } from "../api/sensors";
 import { fetchZones, type ZoneSummary } from "../api/zones";
 import { Card } from "../components/ui/Card";
+import { SensorIcon } from "../components/ui/Icons";
 
 const SENSOR_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "soil_moisture", label: "Humidité sol" },
@@ -180,7 +181,10 @@ export function SensorsAdminPage() {
     <div className="space-y-6">
       {/* HEADER */}
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Capteurs</h1>
+        <h1 className="text-2xl font-semibold inline-flex items-center gap-2">
+          <SensorIcon className="h-5 w-5 text-sky-500" />
+          Capteurs
+        </h1>
         <p className="text-sm text-slate-600 max-w-xl">
           Gestion des capteurs de sol, d'air, etc. Ces capteurs alimentent
           les graphiques, les stratégies d'irrigation et le système
@@ -192,7 +196,10 @@ export function SensorsAdminPage() {
         {/* LISTE CAPTEURS */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-semibold">Liste des capteurs</div>
+            <div className="text-sm font-semibold inline-flex items-center gap-2">
+              <SensorIcon className="h-4 w-4 text-sky-500" />
+              Liste des capteurs
+            </div>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1 text-[11px] text-slate-600">
                 <input

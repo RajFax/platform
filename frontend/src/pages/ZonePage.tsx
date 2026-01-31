@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type {ZoneDetailResponse } from "../api/zones";
 import { fetchZone } from "../api/zones";
+import { ActuatorIcon, CropIcon, SensorIcon } from "../components/ui/Icons";
 import {
   LineChart,
   Line,
@@ -50,7 +51,10 @@ export function ZonePage() {
           {summary.parcel && (
             <div className="text-xs text-slate-600 mt-1">
               Parcelle : {summary.parcel.name} · Culture :{" "}
-              {summary.parcel.culture_type}
+              <span className="inline-flex items-center gap-1">
+                <CropIcon className="h-3.5 w-3.5 text-emerald-500" />
+                {summary.parcel.culture_type}
+              </span>
               {summary.parcel.variety ? ` (${summary.parcel.variety})` : ""} ·
               Stade : {summary.parcel.crop_stage}
             </div>
@@ -68,10 +72,16 @@ export function ZonePage() {
               {summary.zone.is_active ? "Active" : "Inactive"}
             </span>
           </div>
-          <div>Capteurs : {summary.sensors_count}</div>
+          <div className="inline-flex items-center gap-1">
+            <SensorIcon className="h-3.5 w-3.5 text-sky-500" />
+            <span>Capteurs : {summary.sensors_count}</span>
+          </div>
           {summary.controller && (
-            <div>
-              Mode : <span>{summary.controller.mode}</span>
+            <div className="inline-flex items-center gap-1">
+              <ActuatorIcon className="h-3.5 w-3.5 text-indigo-500" />
+              <span>
+                Mode : <span>{summary.controller.mode}</span>
+              </span>
             </div>
           )}
         </div>
@@ -268,7 +278,10 @@ function ZoneSensorsPanel({
   return (
     <div className="border border-slate-200 rounded-lg p-3 bg-white">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-sm font-semibold">Capteurs de la zone</div>
+        <div className="text-sm font-semibold inline-flex items-center gap-2">
+          <SensorIcon className="h-4 w-4 text-sky-500" />
+          Capteurs de la zone
+        </div>
         {summary.parcel && (
           <div className="text-xs text-slate-600">
             Cible sol :{" "}
@@ -324,7 +337,10 @@ function ZoneControllerPanel({
   const ctrl = summary.controller;
   return (
     <div className="border border-slate-200 rounded-lg p-3 bg-white text-xs space-y-1">
-      <div className="text-sm font-semibold mb-1">Contrôleur</div>
+      <div className="text-sm font-semibold mb-1 inline-flex items-center gap-2">
+        <ActuatorIcon className="h-4 w-4 text-indigo-500" />
+        Contrôleur
+      </div>
       {!ctrl ? (
         <div className="text-slate-500">Aucun contrôleur associé.</div>
       ) : (
