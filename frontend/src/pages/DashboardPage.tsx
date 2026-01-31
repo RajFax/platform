@@ -12,7 +12,7 @@ import { fetchControllers } from "../api/controllers";
 import type { ControllerItem } from "../api/controllers";
 import { fetchAlerts } from "../api/alerts";
 import type { AlertItem } from "../api/alerts";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -165,31 +165,8 @@ export function DashboardPage() {
     queryFn: fetchSensors,
   });
 
-  const sensorTypes = useMemo(() => {
-    if (!sensorsData) return [];
-    const types = new Set<string>();
-    sensorsData.forEach((sensor) => {
-      if (sensor.type) types.add(sensor.type);
-    });
-    return Array.from(types).sort((a, b) => a.localeCompare(b));
-  }, [sensorsData]);
-
-  const [selectedSensorType, setSelectedSensorType] = useState<string>("");
-
-  useEffect(() => {
-    if (!selectedSensorType && sensorTypes.length > 0) {
-      setSelectedSensorType(sensorTypes[0]);
-    }
-  }, [selectedSensorType, sensorTypes]);
-
-  const selectedSensors = useMemo(() => {
-    if (!sensorsData) return [];
-    if (!selectedSensorType) return sensorsData;
-    return sensorsData.filter((sensor) => sensor.type === selectedSensorType);
-  }, [sensorsData, selectedSensorType]);
-
   const measurementQueries = useQueries({
-    queries: selectedSensors.map((sensor) => ({
+    queries: (sensorsData ?? []).map((sensor) => ({
       queryKey: ["measurements", sensor.id],
       queryFn: () => fetchMeasurements({ sensor_id: sensor.id, limit: 24 }),
       enabled: Boolean(sensor.id),
@@ -278,28 +255,28 @@ export function DashboardPage() {
   }, [zonesData, sensorsData, controllersData, alertsData]);
 
   const sensorsByZone = useMemo(() => {
-    if (!selectedSensors) return {} as Record<number, SensorSummary[]>;
-    return selectedSensors.reduce((acc, sensor) => {
+    if (!sensorsData) return {} as Record<number, SensorSummary[]>;
+    return sensorsData.reduce((acc, sensor) => {
       if (sensor.zone_id == null) return acc;
       if (!acc[sensor.zone_id]) acc[sensor.zone_id] = [];
       acc[sensor.zone_id].push(sensor);
       return acc;
     }, {} as Record<number, SensorSummary[]>);
-  }, [selectedSensors]);
+  }, [sensorsData]);
 
   const measurementsBySensor = useMemo(() => {
-    if (!selectedSensors || measurementQueries.length === 0) {
+    if (!sensorsData || measurementQueries.length === 0) {
       return {} as Record<number, MeasurementDTO[]>;
     }
     const result: Record<number, MeasurementDTO[]> = {};
-    selectedSensors.forEach((sensor, index) => {
+    sensorsData.forEach((sensor, index) => {
       const query = measurementQueries[index];
       if (query?.data) {
         result[sensor.id] = query.data;
       }
     });
     return result;
-  }, [measurementQueries, selectedSensors]);
+  }, [measurementQueries, sensorsData]);
 
   // Gestion des états de chargement/erreur
   if (
@@ -442,32 +419,11 @@ export function DashboardPage() {
 
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <div className="text-sm font-semibold text-slate-800">
-              Graphes des capteurs par zone
-            </div>
-            <div className="text-xs text-slate-500">
-              Dernières mesures disponibles par capteur
-            </div>
+          <div className="text-sm font-semibold text-slate-800">
+            Graphes des capteurs par zone
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-600">
-            <span>Mesure :</span>
-            <select
-              className="border border-slate-200 rounded-md px-2 py-1 text-xs bg-white"
-              value={selectedSensorType}
-              onChange={(event) => setSelectedSensorType(event.target.value)}
-              disabled={sensorTypes.length === 0}
-            >
-              {sensorTypes.length === 0 ? (
-                <option value="">Aucun type</option>
-              ) : (
-                sensorTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))
-              )}
-            </select>
+          <div className="text-xs text-slate-500">
+            Dernières mesures disponibles par capteur
           </div>
         </div>
         {zonesData.length === 0 ? (
@@ -482,7 +438,6 @@ export function DashboardPage() {
                 zone={zone}
                 sensors={sensorsByZone[zone.id] ?? []}
                 measurementsBySensor={measurementsBySensor}
-                selectedSensorType={selectedSensorType}
               />
             ))}
           </div>
@@ -562,12 +517,10 @@ function ZoneSensorsChart({
   zone,
   sensors,
   measurementsBySensor,
-  selectedSensorType,
 }: {
   zone: ZoneSummary;
   sensors: SensorSummary[];
   measurementsBySensor: Record<number, MeasurementDTO[]>;
-  selectedSensorType: string;
 }) {
   if (sensors.length === 0) {
     return (
@@ -575,9 +528,7 @@ function ZoneSensorsChart({
         <div className="text-sm font-semibold text-slate-800 mb-1">
           {zone.name}
         </div>
-        {selectedSensorType
-          ? `Aucun capteur "${selectedSensorType}" associé à cette zone.`
-          : "Aucun capteur associé à cette zone."}
+        Aucun capteur associé à cette zone.
       </div>
     );
   }
@@ -613,7 +564,6 @@ function ZoneSensorsChart({
           <div className="text-xs text-slate-500">
             {zone.farm?.name ?? "Ferme inconnue"}
             {zone.parcel?.name ? ` · ${zone.parcel.name}` : ""}
-            {selectedSensorType ? ` · ${selectedSensorType}` : ""}
           </div>
         </div>
         <div className="text-xs text-slate-500">
