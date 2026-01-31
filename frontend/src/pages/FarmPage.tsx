@@ -9,6 +9,7 @@ import {
 } from "../api/parcels";
 import { useState } from "react";
 import { Button } from "../components/ui/Button";
+import { CropIcon } from "../components/ui/Icons";
 
 export function FarmPage() {
   const { farmId } = useParams<{ farmId: string }>();
@@ -340,7 +341,8 @@ function ParcelCard({
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-sm font-semibold text-slate-900">{parcel.name}</div>
-          <div className="text-xs text-slate-600 mt-1">
+          <div className="text-xs text-slate-600 mt-1 inline-flex items-center gap-1 flex-wrap">
+            <CropIcon className="h-3.5 w-3.5 text-emerald-500" />
             {parcel.culture_type}
             {parcel.variety ? ` · ${parcel.variety}` : ""}
           </div>

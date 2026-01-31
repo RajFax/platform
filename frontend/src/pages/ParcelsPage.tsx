@@ -16,6 +16,7 @@ import {
 } from "../api/parcels";
 import { fetchFarms, type FarmSummary } from "../api/farms";
 import { Card } from "../components/ui/Card";
+import { CropIcon } from "../components/ui/Icons";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 
@@ -287,7 +288,12 @@ export function ParcelsPage() {
                     <th className="text-left py-2 pr-2">Exploitation</th>
                     <th className="text-left py-2 pr-2">Bloc</th>
                     <th className="text-left py-2 pr-2">Surface (ha)</th>
-                    <th className="text-left py-2 pr-2">Culture</th>
+                    <th className="text-left py-2 pr-2">
+                      <span className="inline-flex items-center gap-1">
+                        <CropIcon className="h-3.5 w-3.5 text-emerald-500" />
+                        Culture
+                      </span>
+                    </th>
                     <th className="text-right py-2 pl-2">Actions</th>
                   </tr>
                 </thead>
@@ -320,7 +326,10 @@ export function ParcelsPage() {
                         {parcel.surface_ha ?? "—"}
                       </td>
                       <td className="py-2 pr-2 text-slate-600">
-                        {parcel.culture_type}
+                        <span className="inline-flex items-center gap-1">
+                          <CropIcon className="h-3.5 w-3.5 text-emerald-500" />
+                          {parcel.culture_type}
+                        </span>
                       </td>
                       <td className="py-2 pl-2 text-right">
                         <div className="flex justify-end gap-1">

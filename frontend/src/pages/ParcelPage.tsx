@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client";
 import { Card } from "../components/ui/Card";
+import { CropIcon } from "../components/ui/Icons";
 
 interface ParcelZone {
   id: number;
@@ -87,7 +88,8 @@ export function ParcelPage() {
         <h1 className="text-2xl font-semibold text-slate-900">
           {parcel.name}
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 inline-flex items-center gap-1 flex-wrap">
+          <CropIcon className="h-4 w-4 text-emerald-500" />
           {parcel.culture_type}
           {parcel.variety ? ` · ${parcel.variety}` : ""} · Stade :{" "}
           {parcel.crop_stage}
@@ -132,7 +134,10 @@ export function ParcelPage() {
             </div>
 
             <div className="flex justify-between">
-              <dt className="text-slate-500">Culture</dt>
+              <dt className="text-slate-500 inline-flex items-center gap-1">
+                <CropIcon className="h-3.5 w-3.5 text-emerald-500" />
+                Culture
+              </dt>
               <dd className="text-slate-800">{parcel.culture_type}</dd>
             </div>
 

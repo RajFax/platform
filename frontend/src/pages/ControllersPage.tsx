@@ -16,6 +16,7 @@ import {
 import { Link } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
+import { ActuatorIcon } from "../components/ui/Icons";
 
 export function ControllersPage() {
   const queryClient = useQueryClient();
@@ -144,7 +145,10 @@ export function ControllersPage() {
     <div className="space-y-6 max-w-6xl">
       {/* HEADER */}
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900">Contrôleurs</h1>
+        <h1 className="text-2xl font-semibold text-slate-900 inline-flex items-center gap-2">
+          <ActuatorIcon className="h-5 w-5 text-indigo-500" />
+          Contrôleurs
+        </h1>
         <p className="text-sm text-slate-500 max-w-xl">
           Gestion des contrôleurs d'irrigation/fertigation, leur mode et leur rattachement à une zone.
         </p>
@@ -154,7 +158,10 @@ export function ControllersPage() {
         {/* LISTE */}
         <Card>
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-semibold text-slate-800">Liste des contrôleurs</div>
+            <div className="text-sm font-semibold text-slate-800 inline-flex items-center gap-2">
+              <ActuatorIcon className="h-4 w-4 text-indigo-500" />
+              Liste des contrôleurs
+            </div>
             <Button variant="primary" size="xs" type="button" onClick={resetForm}>
               + Nouveau contrôleur
             </Button>
