@@ -1,16 +1,27 @@
 // src/pages/DashboardPage.tsx
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Card } from "../components/ui/Card";
 import { fetchZones } from "../api/zones";
 import type { ZoneSummary } from "../api/zones";
 import { fetchSensors } from "../api/sensors";
 import type { SensorSummary } from "../api/sensors";
+import { fetchMeasurements } from "../api/measurements";
+import type { MeasurementDTO } from "../api/measurements";
 import { fetchControllers } from "../api/controllers";
 import type { ControllerItem } from "../api/controllers";
 import { fetchAlerts } from "../api/alerts";
 import type { AlertItem } from "../api/alerts";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 interface FarmApi {
   id: number;
@@ -154,6 +165,46 @@ export function DashboardPage() {
     queryFn: fetchSensors,
   });
 
+  const sensorTypes = useMemo(() => {
+    if (!sensorsData) return [];
+    const types = new Set<string>();
+    sensorsData.forEach((sensor) => {
+      if (sensor.type) types.add(sensor.type);
+    });
+    return Array.from(types).sort((a, b) => a.localeCompare(b));
+  }, [sensorsData]);
+
+  const [selectedSensorType, setSelectedSensorType] =
+    useState<string>("__all__");
+
+  useEffect(() => {
+    if (sensorTypes.length === 0) {
+      if (selectedSensorType !== "__all__") {
+        setSelectedSensorType("__all__");
+      }
+      return;
+    }
+    if (selectedSensorType === "__all__") return;
+    if (selectedSensorType && sensorTypes.includes(selectedSensorType)) return;
+    setSelectedSensorType(sensorTypes[0]);
+  }, [selectedSensorType, sensorTypes]);
+
+  const selectedSensors = useMemo(() => {
+    if (!sensorsData) return [];
+    if (!selectedSensorType || selectedSensorType === "__all__")
+      return sensorsData;
+    return sensorsData.filter((sensor) => sensor.type === selectedSensorType);
+  }, [sensorsData, selectedSensorType]);
+
+  const measurementQueries = useQueries({
+    queries: selectedSensors.map((sensor) => ({
+      queryKey: ["measurements", sensor.id],
+      queryFn: () => fetchMeasurements({ sensor_id: sensor.id, limit: 24 }),
+      enabled: Boolean(sensor.id),
+      staleTime: 60_000,
+    })),
+  });
+
   // Charge les contrôleurs
   const {
     data: controllersData,
@@ -180,11 +231,13 @@ export function DashboardPage() {
       return {} as Record<number, Record<number, any[]>>;
     }
 
-    const sensorsByZone: Record<number, SensorSummary[]> = {};
+    const sensorsByZoneForStats: Record<number, SensorSummary[]> = {};
     sensorsData.forEach((s) => {
       if (s.zone_id != null) {
-        if (!sensorsByZone[s.zone_id]) sensorsByZone[s.zone_id] = [];
-        sensorsByZone[s.zone_id].push(s);
+        if (!sensorsByZoneForStats[s.zone_id]) {
+          sensorsByZoneForStats[s.zone_id] = [];
+        }
+        sensorsByZoneForStats[s.zone_id].push(s);
       }
     });
 
@@ -216,7 +269,7 @@ export function DashboardPage() {
         parcel: z.parcel,
         farm: z.farm,
         is_active: z.is_active,
-        sensors_count: sensorsByZone[z.id]?.length ?? 0,
+        sensors_count: sensorsByZoneForStats[z.id]?.length ?? 0,
         controllers_count: controllersByZone[z.id]?.length ?? 0,
         controllers_online:
           controllersByZone[z.id]?.filter((c) => c.status === "ONLINE")
@@ -233,6 +286,30 @@ export function DashboardPage() {
     });
     return result;
   }, [zonesData, sensorsData, controllersData, alertsData]);
+
+  const sensorsByZoneForCharts = useMemo(() => {
+    if (!selectedSensors) return {} as Record<number, SensorSummary[]>;
+    return selectedSensors.reduce((acc, sensor) => {
+      if (sensor.zone_id == null) return acc;
+      if (!acc[sensor.zone_id]) acc[sensor.zone_id] = [];
+      acc[sensor.zone_id].push(sensor);
+      return acc;
+    }, {} as Record<number, SensorSummary[]>);
+  }, [selectedSensors]);
+
+  const measurementsBySensor = useMemo(() => {
+    if (!selectedSensors || measurementQueries.length === 0) {
+      return {} as Record<number, MeasurementDTO[]>;
+    }
+    const result: Record<number, MeasurementDTO[]> = {};
+    selectedSensors.forEach((sensor, index) => {
+      const query = measurementQueries[index];
+      if (query?.data) {
+        result[sensor.id] = query.data;
+      }
+    });
+    return result;
+  }, [measurementQueries, selectedSensors]);
 
   // Gestion des états de chargement/erreur
   if (
@@ -372,6 +449,58 @@ export function DashboardPage() {
           <RecentAlertsList alerts={data.recent_alerts} />
         </Card>
       </div>
+
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="text-sm font-semibold text-slate-800">
+              Graphes des capteurs par zone
+            </div>
+            <div className="text-xs text-slate-500">
+              Dernières mesures disponibles par capteur
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            <span>Mesure :</span>
+            <select
+              className="border border-slate-200 rounded-md px-2 py-1 text-xs bg-white"
+              value={selectedSensorType}
+              onChange={(event) => setSelectedSensorType(event.target.value)}
+              disabled={sensorTypes.length === 0}
+            >
+              {sensorTypes.length === 0 ? (
+                <option value="__all__">Aucun type</option>
+              ) : (
+                <>
+                  <option value="__all__">Tous les types</option>
+                  {sensorTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+          </div>
+        </div>
+        {zonesData.length === 0 ? (
+          <div className="text-xs text-slate-500">
+            Aucune zone disponible pour afficher des graphes.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {zonesData.map((zone) => (
+              <ZoneSensorsChart
+                key={zone.id}
+                zone={zone}
+                sensors={sensorsByZoneForCharts[zone.id] ?? []}
+                measurementsBySensor={measurementsBySensor}
+                selectedSensorType={selectedSensorType}
+              />
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
@@ -429,6 +558,142 @@ function RecentAlertsList({ alerts }: { alerts: OverviewAlert[] }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+const SENSOR_COLORS = [
+  "#38bdf8",
+  "#34d399",
+  "#a78bfa",
+  "#f472b6",
+  "#facc15",
+  "#fb7185",
+];
+
+function ZoneSensorsChart({
+  zone,
+  sensors,
+  measurementsBySensor,
+  selectedSensorType,
+}: {
+  zone: ZoneSummary;
+  sensors: SensorSummary[];
+  measurementsBySensor: Record<number, MeasurementDTO[]>;
+  selectedSensorType: string;
+}) {
+  if (sensors.length === 0) {
+    return (
+      <div className="border border-slate-200 rounded-lg p-3 bg-white text-xs text-slate-500">
+        <div className="text-sm font-semibold text-slate-800 mb-1">
+          {zone.name}
+        </div>
+        {selectedSensorType && selectedSensorType !== "__all__"
+          ? `Aucun capteur "${selectedSensorType}" associé à cette zone.`
+          : "Aucun capteur associé à cette zone."}
+      </div>
+    );
+  }
+
+  const pointsMap = new Map<string, Record<string, number | string>>();
+  sensors.forEach((sensor) => {
+    const measurements = measurementsBySensor[sensor.id] ?? [];
+    measurements.forEach((measurement) => {
+      const key = measurement.measured_at;
+      if (!pointsMap.has(key)) {
+        pointsMap.set(key, { timestamp: key });
+      }
+      const entry = pointsMap.get(key);
+      if (entry) {
+        entry[`sensor_${sensor.id}`] = measurement.value;
+      }
+    });
+  });
+
+  const chartData = Array.from(pointsMap.values()).sort(
+    (a, b) =>
+      new Date(a.timestamp as string).getTime() -
+      new Date(b.timestamp as string).getTime()
+  );
+
+  return (
+    <div className="border border-slate-200 rounded-lg p-3 bg-white">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <div className="text-sm font-semibold text-slate-800">
+            {zone.name}
+          </div>
+          <div className="text-xs text-slate-500">
+            {zone.farm?.name ?? "Ferme inconnue"}
+            {zone.parcel?.name ? ` · ${zone.parcel.name}` : ""}
+            {selectedSensorType && selectedSensorType !== "__all__"
+              ? ` · ${selectedSensorType}`
+              : ""}
+          </div>
+        </div>
+        <div className="text-xs text-slate-500">
+          {sensors.length} capteur(s)
+        </div>
+      </div>
+
+      {chartData.length === 0 ? (
+        <div className="text-xs text-slate-500">
+          Aucune mesure récente disponible.
+        </div>
+      ) : (
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={chartData}
+              margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+            >
+              <XAxis
+                dataKey="timestamp"
+                tickFormatter={(value) =>
+                  new Date(value).toLocaleTimeString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                }
+                tick={{ fontSize: 10, fill: "#94a3b8" }}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#94a3b8" }}
+                tickLine={false}
+                axisLine={{ stroke: "#e2e8f0" }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#0f172a",
+                  borderColor: "#1e293b",
+                  borderRadius: 8,
+                  fontSize: 11,
+                }}
+                labelFormatter={(value) =>
+                  new Date(value).toLocaleString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    day: "2-digit",
+                    month: "2-digit",
+                  })
+                }
+              />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              {sensors.map((sensor, index) => (
+                <Line
+                  key={sensor.id}
+                  type="monotone"
+                  dataKey={`sensor_${sensor.id}`}
+                  name={sensor.name}
+                  dot={false}
+                  strokeWidth={2}
+                  stroke={SENSOR_COLORS[index % SENSOR_COLORS.length]}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
